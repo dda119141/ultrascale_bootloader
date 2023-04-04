@@ -91,13 +91,8 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_SecondaryBootDeviceInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_DdrEccInit(void);
-static u32 XFsbl_EccInit(u64 DestAddr, u64 LengthBytes);
-static u32 XFsbl_TcmInit(XFsblPs *FsblInstancePtr);
 static void XFsbl_EnableProgToPL(void);
 static void XFsbl_ClearPendingInterrupts(void);
-#ifdef XFSBL_TPM
-static u32 XFsbl_MeasureFsbl(u8 *PartitionHash);
-#endif
 
 /* Functions from xfsbl_misc.c */
 
@@ -123,23 +118,9 @@ extern u8 Image$$BSS_SECTION$$Base;
 #else
 extern u8 __data_start;
 extern u8 __data_end;
-extern u8 __dup_data_start;
-#ifdef XFSBL_TPM
-extern u8 __sbss_start;
-#endif
 #endif
 
-#ifndef XFSBL_BS
-#ifdef __clang__
-u8 ReadBuffer[XFSBL_SIZE_IMAGE_HDR]
-    __attribute__((section(".bss.bitstream_buffer")));
-#else
-u8 ReadBuffer[XFSBL_SIZE_IMAGE_HDR]
-    __attribute__((section(".bitstream_buffer")));
-#endif
-#else
-extern u8 ReadBuffer[READ_BUFFER_SIZE];
-#endif
+u8 ReadBuffer[100];
 
 #ifdef XFSBL_SECURE
 u8 *ImageHdr = ReadBuffer;
@@ -147,49 +128,6 @@ extern u8 AuthBuffer[XFSBL_AUTH_BUFFER_SIZE];
 extern u32 Iv[XIH_BH_IV_LENGTH / 4U];
 #endif
 u32 SdCdnRegVal;
-/****************************************************************************/
-/**
- * This function is used to save the data section into duplicate data section
- * so that it can be restored from in case of subsequent warm restarts
- *
- * @param  None
- *
- * @return None
- *
- * @note
- *
- *****************************************************************************/
-void XFsbl_SaveData(void) {
-	const u8 *MemPtr;
-	u8 *ContextMemPtr = (u8 *)&__dup_data_start;
-
-	for (MemPtr = &__data_start; MemPtr < &__data_end;
-	     MemPtr++, ContextMemPtr++) {
-		*ContextMemPtr = *MemPtr;
-	}
-}
-
-/****************************************************************************/
-/**
- * This function is used to restore the data section from duplicate data section
- * in case of warm restart.
- *
- * @param  None
- *
- * @return None
- *
- * @note
- *
- *****************************************************************************/
-void XFsbl_RestoreData(void) {
-	u8 *MemPtr;
-	u8 *ContextMemPtr = (u8 *)&__dup_data_start;
-
-	for (MemPtr = &__data_start; MemPtr < &__data_end;
-	     MemPtr++, ContextMemPtr++) {
-		*MemPtr = *ContextMemPtr;
-	}
-}
 
 /****************************************************************************/
 /**
@@ -213,18 +151,11 @@ static u32 XFsbl_GetResetReason(void) {
 		Val = CRL_APB_RESET_REASON_PSONLY_RESET_REQ_MASK;
 		XFsbl_Out32(CRL_APB_RESET_REASON, Val);
 		Ret = XFSBL_PS_ONLY_RESET;
-		XFsbl_SaveData();
+		//		XFsbl_SaveData();
 	} else {
 		Ret = (XFsbl_In32(PMU_GLOBAL_GLOB_GEN_STORAGE4) &
 		       XFSBL_APU_RESET_MASK) >>
 		      (XFSBL_APU_RESET_BIT);
-
-		if (Ret == XFSBL_SYSTEM_RESET) {
-			XFsbl_SaveData();
-		} else {
-			Ret = XFSBL_MASTER_ONLY_RESET;
-			XFsbl_RestoreData();
-		}
 	}
 
 	return Ret;
@@ -300,12 +231,6 @@ u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr) {
 	}
 
 	if (XFSBL_MASTER_ONLY_RESET != FsblInstancePtr->ResetReason) {
-		/* Do ECC Initialization of TCM if required */
-		Status = XFsbl_TcmInit(FsblInstancePtr);
-		if (XFSBL_SUCCESS != Status) {
-			goto END;
-		}
-
 		/* Do ECC Initialization of DDR if required */
 		Status = XFsbl_DdrEccInit();
 		if (XFSBL_SUCCESS != Status) {
@@ -702,25 +627,6 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr) {
 		   CRL_APB_BOOT_MODE_USER_BOOT_MODE_MASK;
 
 	FsblInstancePtr->PrimaryBootDevice = BootMode;
-
-	/**
-	 * Enable drivers only if they are device boot modes
-	 * Not required for JTAG modes
-	 */
-	if ((BootMode == XFSBL_QSPI24_BOOT_MODE) ||
-	    (BootMode == XFSBL_QSPI32_BOOT_MODE) ||
-	    (BootMode == XFSBL_NAND_BOOT_MODE) ||
-	    (BootMode == XFSBL_SD0_BOOT_MODE) ||
-	    (BootMode == XFSBL_EMMC_BOOT_MODE) ||
-	    (BootMode == XFSBL_SD1_BOOT_MODE) ||
-	    (BootMode == XFSBL_SD1_LS_BOOT_MODE) ||
-	    (BootMode == XFSBL_USB_BOOT_MODE)) {
-		/* Initialize CSUDMA driver */
-		Status = XFsbl_CsuDmaInit(NULL);
-		if (XFSBL_SUCCESS != Status) {
-			goto END;
-		}
-	}
 
 /**
  * If FSBL_PARTITION_LOAD_EXCLUDE macro is defined,then the partition loading
@@ -1314,127 +1220,6 @@ END:
 
 /*****************************************************************************/
 /**
- * This function does ECC Initialization of memory
- *
- * @param	DestAddr is start address from where to calculate ECC
- * @param	LengthBytes is length in bytes from start address to calculate
- *ECC
- *
- * @return
- * 		- XFSBL_SUCCESS for successful ECC Initialization
- * 		- errors as mentioned in xfsbl_error.h
- *
- *****************************************************************************/
-static u32 XFsbl_EccInit(u64 DestAddr, u64 LengthBytes) {
-	u32 RegVal;
-	u32 Status;
-	u32 Length;
-	u64 StartAddr = DestAddr;
-	u64 NumBytes = LengthBytes;
-
-	Xil_DCacheDisable();
-
-	while (NumBytes > 0U) {
-		if (NumBytes > ZDMA_TRANSFER_MAX_LEN) {
-			Length = ZDMA_TRANSFER_MAX_LEN;
-		} else {
-			Length = (u32)NumBytes;
-		}
-
-		/* Wait until the DMA is in idle state */
-		do {
-			RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_STATUS);
-			RegVal &= ADMA_CH0_ZDMA_CH_STATUS_STATE_MASK;
-		} while ((RegVal != ADMA_CH0_ZDMA_CH_STATUS_STATE_DONE) &&
-			 (RegVal != ADMA_CH0_ZDMA_CH_STATUS_STATE_ERR));
-
-		/* Enable Simple (Write Only) Mode */
-		RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_CTRL0);
-		RegVal &= (ADMA_CH0_ZDMA_CH_CTRL0_POINT_TYPE_MASK |
-			   ADMA_CH0_ZDMA_CH_CTRL0_MODE_MASK);
-		RegVal |= (ADMA_CH0_ZDMA_CH_CTRL0_POINT_TYPE_NORMAL |
-			   ADMA_CH0_ZDMA_CH_CTRL0_MODE_WR_ONLY);
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_CTRL0, RegVal);
-
-		/* Fill in the data to be written */
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD0,
-			    XFSBL_ECC_INIT_VAL_WORD);
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD1,
-			    XFSBL_ECC_INIT_VAL_WORD);
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD2,
-			    XFSBL_ECC_INIT_VAL_WORD);
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD3,
-			    XFSBL_ECC_INIT_VAL_WORD);
-
-		/* Write Destination Address */
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD0,
-			    (u32)(StartAddr &
-				  ADMA_CH0_ZDMA_CH_DST_DSCR_WORD0_LSB_MASK));
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD1,
-			    (u32)((StartAddr >> 32U) &
-				  ADMA_CH0_ZDMA_CH_DST_DSCR_WORD1_MSB_MASK));
-
-		/* Size to be Transferred. Recommended to set both src and dest
-		 * sizes */
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_SRC_DSCR_WORD2, Length);
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD2, Length);
-
-		/* DMA Enable */
-		RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_CTRL2);
-		RegVal |= ADMA_CH0_ZDMA_CH_CTRL2_EN_MASK;
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_CTRL2, RegVal);
-
-		/* Check the status of the transfer by polling on DMA Done */
-		do {
-			RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_ISR);
-			RegVal &= ADMA_CH0_ZDMA_CH_ISR_DMA_DONE_MASK;
-		} while (RegVal != ADMA_CH0_ZDMA_CH_ISR_DMA_DONE_MASK);
-
-		/* Clear DMA status */
-		RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_ISR);
-		RegVal |= ADMA_CH0_ZDMA_CH_ISR_DMA_DONE_MASK;
-		XFsbl_Out32(ADMA_CH0_ZDMA_CH_ISR,
-			    ADMA_CH0_ZDMA_CH_ISR_DMA_DONE_MASK);
-
-		/* Read the channel status for errors */
-		RegVal = XFsbl_In32(ADMA_CH0_ZDMA_CH_STATUS);
-		if (RegVal == ADMA_CH0_ZDMA_CH_STATUS_STATE_ERR) {
-			Status = XFSBL_FAILURE;
-			Xil_DCacheEnable();
-			goto END;
-		}
-
-		NumBytes -= Length;
-		StartAddr += Length;
-	}
-
-	Xil_DCacheEnable();
-
-	/* Restore reset values for the DMA registers used */
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_CTRL0, 0x00000080U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD0, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD1, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD2, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_WR_ONLY_WORD3, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD0, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD1, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_SRC_DSCR_WORD2, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_DST_DSCR_WORD2, 0x00000000U);
-	XFsbl_Out32(ADMA_CH0_ZDMA_CH_CTRL0_TOTAL_BYTE_COUNT, 0x00000000U);
-
-	XFsbl_Printf(
-	    DEBUG_INFO,
-	    "Address 0x%0x%08x, Length 0x%0x%08x, ECC initialized \r\n",
-	    (u32)(DestAddr >> 32U), (u32)DestAddr, (u32)(LengthBytes >> 32U),
-	    (u32)LengthBytes);
-
-	Status = XFSBL_SUCCESS;
-END:
-	return Status;
-}
-
-/*****************************************************************************/
-/**
  * This function does ECC Initialization of DDR memory
  *
  * @param none
@@ -1478,166 +1263,6 @@ END:
 #else
 	Status = XFSBL_SUCCESS;
 #endif
-	return Status;
-}
-
-/*****************************************************************************/
-/**
- * This function does ECC Initialization of TCM memory
- *
- * @param FsblInstancePtr is pointer to the XFsbl Instance
- * @param CpuId One of R5-0, R5-1, R5-LS, A53-0
- *
- * @return
- * 		- XFSBL_SUCCESS for successful ECC Initialization
- * 		-               or if ECC Initialization is not enabled
- * 		- errors as mentioned in xfsbl_error.h
- *
- *****************************************************************************/
-u32 XFsbl_TcmEccInit(XFsblPs *FsblInstancePtr, u32 CpuId) {
-	u32 Status;
-	u32 LengthBytes;
-	u32 ATcmAddr;
-	u32 BTcmAddr;
-	u32 EccInitStatus;
-	u8 FlagReduceAtcmLength = FALSE;
-
-	XFsbl_Printf(DEBUG_GENERAL, "Initializing TCM ECC\n\r");
-
-	/**
-	 * If for A53, TCM ECC need to be initialized, do it for all banks
-	 * of TCM.for R5-L,R5-0 processor don't initialize initial 32 bytes of
-	 * TCM. For R5-0,R5-1 initialize corresponding banks of TCM.*/
-
-	/**
-	 * For R5-L,R5-0 don't initialize initial 32 bytes of TCM,
-	 * because initial 32 bytes are holding R5 vectors.
-	 */
-
-	if (CpuId == XIH_PH_ATTRB_DEST_CPU_A53_0) {
-		ATcmAddr = XFSBL_R50_HIGH_ATCM_START_ADDRESS;
-		LengthBytes = XFSBL_R5_TCM_BANK_LENGTH * 4U;
-		Status = XFsbl_EccInit(ATcmAddr, LengthBytes);
-		EccInitStatus = XFSBL_R50_TCM_ECC_INIT_STATUS |
-				XFSBL_R51_TCM_ECC_INIT_STATUS;
-
-	} else if (CpuId == XIH_PH_ATTRB_DEST_CPU_R5_L) {
-		if (FsblInstancePtr->ProcessorID !=
-		    XIH_PH_ATTRB_DEST_CPU_A53_0) {
-			ATcmAddr = XFSBL_R50_HIGH_ATCM_START_ADDRESS +
-				   32U; /* Not to overwrite R5 vectors */
-			LengthBytes = (XFSBL_R5_TCM_BANK_LENGTH * 4U) - 32U;
-		} else {
-			ATcmAddr = XFSBL_R50_HIGH_ATCM_START_ADDRESS;
-			LengthBytes = XFSBL_R5_TCM_BANK_LENGTH * 4U;
-		}
-		Status = XFsbl_EccInit(ATcmAddr, LengthBytes);
-		EccInitStatus = XFSBL_R50_TCM_ECC_INIT_STATUS |
-				XFSBL_R51_TCM_ECC_INIT_STATUS;
-	} else {
-		if (CpuId == XIH_PH_ATTRB_DEST_CPU_R5_0) {
-			if (FsblInstancePtr->ProcessorID !=
-			    XIH_PH_ATTRB_DEST_CPU_A53_0) {
-				ATcmAddr =
-				    XFSBL_R50_HIGH_ATCM_START_ADDRESS +
-				    32U; /* Not to overwrite R5 vectors */
-				BTcmAddr = XFSBL_R50_HIGH_BTCM_START_ADDRESS;
-				LengthBytes = XFSBL_R5_TCM_BANK_LENGTH;
-				FlagReduceAtcmLength = TRUE;
-			} else {
-				ATcmAddr = XFSBL_R50_HIGH_ATCM_START_ADDRESS;
-				BTcmAddr = XFSBL_R50_HIGH_BTCM_START_ADDRESS;
-				LengthBytes = XFSBL_R5_TCM_BANK_LENGTH;
-			}
-			EccInitStatus = XFSBL_R50_TCM_ECC_INIT_STATUS;
-
-		} else if (CpuId == XIH_PH_ATTRB_DEST_CPU_R5_1) {
-			ATcmAddr = XFSBL_R51_HIGH_ATCM_START_ADDRESS;
-			BTcmAddr = XFSBL_R51_HIGH_BTCM_START_ADDRESS;
-			EccInitStatus = XFSBL_R51_TCM_ECC_INIT_STATUS;
-			LengthBytes = XFSBL_R5_TCM_BANK_LENGTH;
-		} else {
-			/* for MISRA-C */
-			ATcmAddr = 0U;
-			BTcmAddr = 0U;
-			EccInitStatus = 0U;
-			LengthBytes = 0U;
-		}
-
-		if (FlagReduceAtcmLength == TRUE) {
-			Status = XFsbl_EccInit(ATcmAddr, LengthBytes - 32U);
-		} else {
-			Status = XFsbl_EccInit(ATcmAddr, LengthBytes);
-		}
-
-		if (XFSBL_SUCCESS == Status) {
-			Status = XFsbl_EccInit(BTcmAddr, LengthBytes);
-		}
-	}
-
-	if (XFSBL_SUCCESS == Status) {
-		/* Indicate in flag that TCM ECC is initialized */
-		FsblInstancePtr->TcmEccInitStatus = EccInitStatus;
-	} else {
-		Status = XFSBL_ERROR_TCM_ECC_INIT;
-		XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_TCM_ECC_INIT\n\r");
-		goto END;
-	}
-
-END:
-	return Status;
-}
-
-/*****************************************************************************/
-/**
- * This function adds additional steps for TCM ECC Initialization for A53.
- * These are to power-up TCM before actual ECC calculation and after it is done,
- * to keep RPU in reset
- *
- * @param FsblInstancePtr is pointer to the XFsbl Instance
- *
- * @return
- * 		- XFSBL_SUCCESS for success
- * 		- errors as mentioned in xfsbl_error.h
- *
- *****************************************************************************/
-static u32 XFsbl_TcmInit(XFsblPs *FsblInstancePtr) {
-	u32 Status;
-	u32 RegValue;
-
-	if (FsblInstancePtr->ProcessorID == XIH_PH_ATTRB_DEST_CPU_A53_0) {
-#ifndef XFSBL_A53_TCM_ECC
-		Status = XFSBL_SUCCESS;
-		goto END;
-#endif
-	}
-
-	if (FsblInstancePtr->ProcessorID == XIH_PH_ATTRB_DEST_CPU_A53_0) {
-		/* If TCM ECC has to be initialized for A53, power it up first
-		 */
-		Status = XFsbl_PowerUpMemory(XFSBL_R5_L_TCM);
-		if (Status != XFSBL_SUCCESS) {
-			goto END;
-		}
-	}
-
-	/* Do ECC Initialization of TCM if required */
-	Status =
-	    XFsbl_TcmEccInit(FsblInstancePtr, FsblInstancePtr->ProcessorID);
-	if (XFSBL_SUCCESS != Status) {
-		goto END;
-	}
-
-	/* Place the RPU back in reset, to let user power it up when required */
-	if (FsblInstancePtr->ProcessorID == XIH_PH_ATTRB_DEST_CPU_A53_0) {
-		RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-		RegValue |= (CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK |
-			     CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK |
-			     CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-		XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
-	}
-
-END:
 	return Status;
 }
 
@@ -1738,79 +1363,3 @@ void XFsbl_MarkDdrAsReserved(u8 Cond) {
 #endif
 #endif
 }
-#ifdef XFSBL_TPM
-
-/*****************************************************************************/
-/**
- * This function calculates the hash on FSBL. Data section should be untouched
- * at the time of calling this function.
- *
- * @param	PartitionHash is pointer to the instance to store hash of FSBL
- *
- * @return	XFSBL_SUCCESS on success and error code on failure
- *
- *****************************************************************************/
-static u32 XFsbl_MeasureFsbl(u8 *PartitionHash) {
-	u32 Status = XFSBL_FAILURE;
-	u32 Size;
-	u32 RegVal;
-	u8 ReadBuffer[XFSBL_SHA3_BLOCK_LEN] = {0U};
-	u8 PadLen;
-	u8 Index;
-	XCsuDma CsuDma = {0U};
-	u32 *HashPtr = (u32 *)PartitionHash;
-
-#ifdef __clang__
-	Size = (u32)((PTRSIZE)&Image$$BSS_SECTION$$Base - XFSBL_OCM_START_ADDR);
-#else
-	Size = (u32)((PTRSIZE)&__sbss_start - XFSBL_OCM_START_ADDR);
-#endif
-
-	XFsbl_Out32(CSU_DMA_RESET, CSU_DMA_RESET_RESET_MASK);
-	Status = XFsbl_CsuDmaInit(&CsuDma);
-	if (Status != XFSBL_SUCCESS) {
-		goto END;
-	}
-
-	XFsbl_Out32(CSU_CSU_SSS_CFG, CSU_CSU_SSS_CFG_SHA_SSS_DMA_VAL);
-	XFsbl_Out32(CSU_SHA_RESET, 0U);
-	XFsbl_Out32(CSU_SHA_START, CSU_SHA_START_START_MSG_MASK);
-
-	PadLen = (Size % XFSBL_SHA3_BLOCK_LEN);
-	Size = Size - PadLen;
-	XCsuDma_Transfer(&CsuDma, XCSUDMA_SRC_CHANNEL, XFSBL_OCM_START_ADDR,
-			 Size / 4U, 0U);
-
-	/* Checking the CSU DMA done bit should be enough. */
-	XCsuDma_WaitForDone(&CsuDma, XCSUDMA_SRC_CHANNEL);
-
-	/* Acknowledge the transfer has completed */
-	XCsuDma_IntrClear(&CsuDma, XCSUDMA_SRC_CHANNEL, XCSUDMA_IXR_DONE_MASK);
-
-	memcpy((u8 *)ReadBuffer, (u8 *)(UINTPTR)(XFSBL_OCM_START_ADDR + Size),
-	       PadLen);
-	ReadBuffer[PadLen] = XFSBL_START_KECCAK_PADDING_MASK;
-	ReadBuffer[XFSBL_SHA3_BLOCK_LEN - 1U] |= XFSBL_END_KECCAK_PADDING_MASK;
-
-	XCsuDma_Transfer(&CsuDma, XCSUDMA_SRC_CHANNEL, (PTRSIZE)&ReadBuffer[0U],
-			 XFSBL_SHA3_BLOCK_LEN / 4U, 1U);
-
-	/* Checking the CSU DMA done bit should be enough. */
-	XCsuDma_WaitForDone(&CsuDma, XCSUDMA_SRC_CHANNEL);
-
-	/* Acknowledge the transfer has completed */
-	XCsuDma_IntrClear(&CsuDma, XCSUDMA_SRC_CHANNEL, XCSUDMA_IXR_DONE_MASK);
-
-	while ((Xil_In32(CSU_SHA_DONE) & CSU_SHA_DONE_SHA_DONE_MASK) == 0U)
-		;
-
-	/* Copy has from CSU_SHA_DIGEST registers to PartitionHash variable */
-	for (Index = 0U; Index < XFSBL_HASH_LENGTH_IN_WORDS; Index++) {
-		RegVal = XFsbl_In32(CSU_SHA_DIGEST_0 + (Index * 4U));
-		HashPtr[XFSBL_HASH_LENGTH_IN_WORDS - Index - 1U] = RegVal;
-	}
-
-END:
-	return Status;
-}
-#endif

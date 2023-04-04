@@ -34,7 +34,7 @@ sub_component += lib/xiicps
 #sub_component += lib/sdps 
 #sub_component += lib/xilpm/common
 
-EXEC := fsbl.elf
+EXEC := fsbl_a53_zc102.elf
 
 INCLUDEPATH += -I$(CURDIR) 
 INCLUDEPATH += -I$(CURDIR)/generated 
@@ -55,7 +55,6 @@ PHONY += $(EXEC)
 $(EXEC): $(LIBS) $(OBJS) $(includes)
 	$(CC) -o $@ $(OBJS) $(CC_FLAGS) $(LDFLAGS) $(linker_script)
 	$(DUMP) $(EXEC)  > dump
-	cp $(EXEC) fsbl.elf
 
 PHONY += $(LIBS)
 $(LIBS): 

@@ -102,52 +102,13 @@ SECTIONS
    *(.gcc_except_table)
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
-.mmu_tbl0 (ALIGN(4096)) : {
-   __mmu_tbl0_start = .;
-   *(.mmu_tbl0)
-   __mmu_tbl0_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.mmu_tbl1 (ALIGN(4096)) : {
-   __mmu_tbl1_start = .;
-   *(.mmu_tbl1)
-   __mmu_tbl1_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.mmu_tbl2 (ALIGN(4096)) : {
-   __mmu_tbl2_start = .;
-   *(.mmu_tbl2)
-   __mmu_tbl2_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
 .data (ALIGN(64)): {
    __data_start = .;
    *(.data)
    *(.data.*)
    *(.gnu.linkonce.d.*)
    *(.jcr)
-   *(.got)
-   *(.got.plt)
    __data_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.data1 (ALIGN(64)): {
-   __data1_start = .;
-   *(.data1)
-   *(.data1.*)
-   __data1_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.tdata (ALIGN(64)): {
-   __tdata_start = .;
-   *(.tdata)
-   *(.tdata.*)
-   *(.gnu.linkonce.td.*)
-   __tdata_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.got : {
-   *(.got)
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
 .got1 : {
@@ -157,30 +118,7 @@ SECTIONS
 .got2 : {
    *(.got2)
 } > psu_ocm_ram_0_S_AXI_BASEADDR
-/*
-.ctors (ALIGN(64)): {
-   __CTOR_LIST__ = .;
-   ___CTORS_LIST___ = .;
-   KEEP (*crtbegin.o(.ctors))
-   KEEP (*(EXCLUDE_FILE(*crtend.o) .ctors))
-   KEEP (*(SORT(.ctors.*)))
-   KEEP (*(.ctors))
-   __CTOR_END__ = .;
-   ___CTORS_END___ = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-*/
-/*
-.dtors (ALIGN(64)): {
-   __DTOR_LIST__ = .;
-   ___DTORS_LIST___ = .;
-   KEEP (*crtbegin.o(.dtors))
-   KEEP (*(EXCLUDE_FILE(*crtend.o) .dtors))
-   KEEP (*(SORT(.dtors.*)))
-   KEEP (*(.dtors))
-   __DTOR_END__ = .;
-   ___DTORS_END___ = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-*/
+
 .fixup : {
    __fixup_start = .;
    *(.fixup)
@@ -222,22 +160,6 @@ SECTIONS
    __ARM.attributes_end = .;
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
-.sdata (ALIGN(64)): {
-    __sdata_start = .;
-   *(.sdata)
-   *(.sdata.*)
-   *(.gnu.linkonce.s.*)
-   __sdata_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.sdata2 (ALIGN(64)): {
-   __sdata2_start = .;
-   *(.sdata2)
-   *(.sdata2.*)
-   *(.gnu.linkonce.s2.*)
-   __sdata2_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
 .sbss (NOLOAD) : {
    __sbss_start = .;
  . = ALIGN(64);
@@ -246,22 +168,6 @@ SECTIONS
    *(.gnu.linkonce.sb.*)
     . = ALIGN(64);
    __sbss_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.sbss2 (ALIGN(64)): {
-   __sbss2_start = .;
-   *(.sbss2)
-   *(.sbss2.*)
-   *(.gnu.linkonce.sb2.*)
-   __sbss2_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.tbss (ALIGN(64)): {
-   __tbss_start = .;
-   *(.tbss)
-   *(.tbss.*)
-   *(.gnu.linkonce.tb.*)
-   __tbss_end = .;
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
 .bss (NOLOAD) : {
@@ -275,9 +181,7 @@ SECTIONS
    __bss_end__ = .;
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
-_SDA_BASE_ = __sdata_start + ((__sbss_end - __sdata_start) / 2 );
 
-_SDA2_BASE_ = __sdata2_start + ((__sbss2_end - __sdata2_start) / 2 );
 
 /* Generate Stack and Heap definitions */
 
@@ -301,21 +205,16 @@ _SDA2_BASE_ = __sdata2_start + ((__sbss2_end - __sdata2_start) / 2 );
    __el0_stack = .;
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
-.dup_data (ALIGN(64)): {
-   __dup_data_start = .;
-   . += __data_end - __data_start ;
-   __dup_data_end = .;
-} > psu_ocm_ram_2_S_AXI_BASEADDR
-
 .handoff_params (NOLOAD) : {
    . = ALIGN(512);
    *(.handoff_params)
-} > psu_ocm_ram_2_S_AXI_BASEADDR
+} > psu_ocm_ram_1_S_AXI_BASEADDR
 
+/*
 .bitstream_buffer (NOLOAD) : {
 	. = ALIGN(32);
 	*(.bitstream_buffer)
 } > psu_ocm_ram_2_S_AXI_BASEADDR
-
+*/
 _end = .;
 }
