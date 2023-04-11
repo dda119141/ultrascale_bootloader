@@ -60,19 +60,7 @@
 	.globl	_startup
 _startup:
 	mov	x0, #0
-#if ! defined(VERSAL_NET)
-.if (EL3 == 1)
-	/* Check whether the clearing of bss sections shall be skipped */
-	ldr	x10, =APU_PWRCTL	/* Load PWRCTRL address */
-	ldr	w11, [x10]		/* Read PWRCTRL register */
-	mrs	x2, MPIDR_EL1		/* Read MPIDR_EL1 */
-	ubfx	x2, x2, #0, #8		/* Extract CPU ID (affinity level 0) */
-	mov	w1, #1
-	lsl	w2, w1, w2		/* Shift CPU ID to get one-hot ID */
-	ands	w11, w11, w2		/* Get PWRCTRL bit for this core */
-	bne	.Lenclbss		/* Skip BSS and SBSS clearing */
-.endif
-#endif
+
 	/* clear sbss */
 	ldr 	x1,.Lsbss_start		/* calculate beginning of the SBSS */
 	ldr	x2,.Lsbss_end		/* calculate end of the SBSS */
@@ -103,32 +91,6 @@ _startup:
 	#if defined (SLEEP_TIMER_BASEADDR)
 	bl XTime_StartTTCTimer
 	#endif
-
-	.if (EL1_NONSECURE == 1 && HYP_GUEST == 1)
-	/*
-	 * Xen domU guest memory map is not same as that of
-	 * native ZynqMP memory map. Currently GIC for Xen
-         * domU guest is being mapped at < 2GB address, which
-	 * is configured as normal cacheable memory (DDR) in
-	 * default translation table. As GIC needs to be
-	 * configured as device memory, updating attributes
-	 * of GIC region as strongly ordered, RW, non executable
-	 * through Xil_SetTlbAttributes API. Below code snippet
-	 * in assemby is equivalent to,
-	 * Xil_SetTlbAttributes(XPAR_SCUGIC_0_DIST_BASEADDR,
-	 * 			STRONG_ORDERED | EXECUTE_NEVER)
-	 */
-	 ldr    x0, =XPAR_SCUGIC_0_DIST_BASEADDR
-         mov    x1, #0x409
-         orr    x1, x1, #(0x1 << 53)
-         orr    x1, x1, #(0x1 << 54)
-         bl     Xil_SetTlbAttributes
-	.endif
-
-	.if (EL1_NONSECURE == 1 && HYP_GUEST == 1 && \
-	     XEN_USE_PV_CONSOLE == 1)
-         bl XPVXenConsole_Init
-	.endif
 
 	/* Set E, C and D bits */
 	mrs x1, PMCR_EL0

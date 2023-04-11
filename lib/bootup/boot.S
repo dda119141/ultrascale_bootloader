@@ -155,16 +155,7 @@ _boot:
 	mov      x28, #0
 	mov      x29, #0
 	mov      x30, #0
-#if 0 //don't put other a53 cpus in wfi
-   //Which core am I
-   // ----------------
-	mrs      x0, MPIDR_EL1
-	and      x0, x0, #0xFF                        //Mask off to leave Aff0
-	cbz      x0, OKToRun                          //If core 0, run the primary init code
-EndlessLoop0:
-	wfi
-	b        EndlessLoop0
-#endif
+
 OKToRun:
 
 	mrs	x0, currentEL
@@ -172,6 +163,7 @@ OKToRun:
 	beq	InitEL3
 
 	b 	error			// go to error if current exception level is neither EL3 nor EL1
+
 InitEL3:
 .if (EL3 == 1)
 	/*Set vector table base address*/
@@ -183,6 +175,7 @@ InitEL3:
 	mrs  x0, MPIDR_EL1
 	and  x0, x0, #0xFF
 	mov  w0, w0
+
 #ifndef VERSAL_NET
 	ldr	 w2, =rvbar_base
 	/* calculate the rvbar base address for particular CPU core */
@@ -192,6 +185,7 @@ InitEL3:
 	/* store vector base address to RVBAR */
 	str  x1, [x2]
 #endif
+
 	/*Define stack pointer for current exception level*/
 	ldr	 x2,=EL3_stack
 	mov	 sp,x2

@@ -33,6 +33,7 @@
 #include "xfsbl_main.h"
 
 #include "bspconfig.h"
+#include "psu_init.h"
 #include "xfsbl_hw.h"
 
 /************************** Constant Definitions *****************************/

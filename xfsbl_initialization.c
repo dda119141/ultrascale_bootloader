@@ -562,7 +562,6 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 	 * psu initialization
 	 */
 	Status = XFsbl_HookPsuInit();
-
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
