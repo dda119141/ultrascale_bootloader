@@ -161,34 +161,6 @@
 _vector_table:
 .set	VBAR, _vector_table
 .org VBAR
-/*
- * if application is built for XEN GUEST as EL1 Non-secure following image
- * header is required by XEN.
- */
-.if (HYP_GUEST == 1)
-
-	/* Valid Image header.  */
-	/* HW reset vector.  */
-	ldr	x16, =_boot
-	br	x16
-
-	/* text offset.  */
-	.dword	0
-	/* image size.  */
-	.dword	0
-	/* flags.  */
-	.dword	8
-	/* RES0  */
-	.dword	0
-	.dword	0
-	.dword	0
-
-	/* magic  */
-	.dword	0x644d5241
-	/* RES0  */
-	.dword	0
-	/* End of Image header.  */
-.endif
 
 	b	_boot
 .org (VBAR + 0x200)
@@ -207,38 +179,38 @@ _vector_table:
 SynchronousInterruptHandler:
 	saveregister
 
-/* Check if the Synchronous abort is occurred due to floating point access. */
-.if (EL3 == 1)
-	mrs	x0, ESR_EL3
-.endif
-	and	x0, x0, #(0x3F << 26)
-	mov	x1, #(0x7 << 26)
-	cmp	x0, x1
-/* If exception is not due to floating point access go to synchronous handler */
-	bne	synchronoushandler
+	/* Check if the Synchronous abort is occurred due to floating point access. */
+	.if (EL3 == 1)
+		mrs	x0, ESR_EL3
+	.endif
+		and	x0, x0, #(0x3F << 26)
+		mov	x1, #(0x7 << 26)
+		cmp	x0, x1
+	/* If exception is not due to floating point access go to synchronous handler */
+		bne	synchronoushandler
 
-/*
- * If excpetion occurred due to floating point access, Enable the floating point
- * access i.e. do not trap floating point instruction
- */
- .if (EL3 == 1)
-	mrs	x1,CPTR_EL3
-	bic	x1, x1, #(0x1<<10)
-	msr	CPTR_EL3, x1
-.endif
-	isb
+	/*
+ 	* If excpetion occurred due to floating point access, Enable the floating point
+ 	* access i.e. do not trap floating point instruction
+ 	*/
+ 	.if (EL3 == 1)
+		mrs	x1,CPTR_EL3
+		bic	x1, x1, #(0x1<<10)
+		msr	CPTR_EL3, x1
+	.endif
+		isb
 
-/* If the floating point access was previously enabled, store FPU context
- * registers(storefloat).
- */
+	/* If the floating point access was previously enabled, store FPU context
+	 * registers(storefloat).
+	 */
 	ldr	x0, =FPUStatus
 	ldrb	w1,[x0]
 	cbnz	w1, storefloat
-/*
- * If the floating point access was not enabled previously, save the status of
- * floating point accessibility i.e. enabled and store floating point context
- * array address(FPUContext) to FPUContextBase.
- */
+	/*
+ 	* If the floating point access was not enabled previously, save the status of
+ 	* floating point accessibility i.e. enabled and store floating point context
+ 	* array address(FPUContext) to FPUContextBase.
+ 	*/
 	mov	w1, #0x1
 	strb	w1, [x0]
 	ldr	x0, =FPUContext
@@ -258,7 +230,6 @@ restorecontext:
 	exception_return
 
 IRQInterruptHandler:
-
 	saveregister
 /* Save the status of SPSR, ELR and CPTR to stack */
  .if (EL3 == 1)
@@ -283,57 +254,57 @@ IRQInterruptHandler:
  * restore floating point registers.
  */
 
- .if (EL3 == 1)
+.if (EL3 == 1)
 	mrs	x0, CPTR_EL3
 	ands	x0, x0, #(0x1<<10)
 	bne	RestorePrevState
 .endif
-
 	restorefloatregister
 
-/* Restore the status of SPSR, ELR and CPTR from stack */
-RestorePrevState:
-	ldr	x2,[sp],0x10
-	ldp	x0, x1, [sp],0x10
- .if (EL3 == 1)
-	msr	CPTR_EL3, x0
-	msr	ELR_EL3, x1
-	msr	SPSR_EL3, x2
-.endif
+	/* Restore the status of SPSR, ELR and CPTR from stack */
+	RestorePrevState:
+		ldr	x2,[sp],0x10
+		ldp	x0, x1, [sp],0x10
+ 	.if (EL3 == 1)
+		msr	CPTR_EL3, x0
+		msr	ELR_EL3, x1
+		msr	SPSR_EL3, x2
+	.endif
 
 	restoreregister
 	exception_return
 
+
 FIQInterruptHandler:
+	saveregister
 
-  saveregister
-/* Save the status of SPSR, ELR and CPTR to stack */
- .if (EL3 == 1)
-	mrs 	x0, CPTR_EL3
-	mrs 	x1, ELR_EL3
-	mrs	x2, SPSR_EL3
-.endif
-	stp	x0, x1, [sp,#-0x10]!
-	str	x2, [sp,#-0x10]!
+	/* Save the status of SPSR, ELR and CPTR to stack */
+	.if (EL3 == 1)
+		mrs 	x0, CPTR_EL3
+		mrs 	x1, ELR_EL3
+		mrs	x2, SPSR_EL3
+	.endif
+		stp	x0, x1, [sp,#-0x10]!
+		str	x2, [sp,#-0x10]!
 
-/* Trap floating point access */
- .if (EL3 == 1)
-	mrs	x1,CPTR_EL3
-	orr	x1, x1, #(0x1<<10)
-	msr	CPTR_EL3, x1
-	isb
-	bl	FIQInterrupt
-.endif
+	/* Trap floating point access */
+	.if (EL3 == 1)
+		mrs	x1,CPTR_EL3
+		orr	x1, x1, #(0x1<<10)
+		msr	CPTR_EL3, x1
+		isb
+		bl	FIQInterrupt
+	.endif
+
 	/*
- * If floating point access is enabled during interrupt handling,
- * restore floating point registers.
- */
-
- .if (EL3 == 1)
-	mrs	x0, CPTR_EL3
-	ands	x0, x0, #(0x1<<10)
-	bne	RestorePrevStatefiq
-.endif
+	 * If floating point access is enabled during interrupt handling,
+ 	* restore floating point registers.
+ 	*/
+	.if (EL3 == 1)
+		mrs	x0, CPTR_EL3
+		ands	x0, x0, #(0x1<<10)
+		bne	RestorePrevStatefiq
+	.endif
 	restorefloatregister
 
 	/* Restore the status of SPSR, ELR and CPTR from stack */
@@ -349,13 +320,9 @@ RestorePrevStatefiq:
 	exception_return
 
 SErrorInterruptHandler:
-
 	saveregister
-
 	bl      SErrorInterrupt
-
 	restoreregister
-
 	exception_return
 
 

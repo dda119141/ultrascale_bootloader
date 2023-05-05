@@ -642,23 +642,6 @@ void XFsbl_SetTlbAttributes(INTPTR Addr, UINTPTR attrib)
 	dsb(); /* ensure completion of the BP and TLB invalidation */
     isb(); /* synchronize context on this processor */
 #else
-	u32 *ptr;
-	u32 section;
-
-	section = Addr / 0x100000U;
-	Funcptr = &MMUTable;
-	ptr = (u32*)Funcptr + section;
-
-	if(ptr != NULL) {
-		*ptr = (Addr & 0xFFF00000U) | attrib;
-	}
-
-	mtcp(XREG_CP15_INVAL_UTLB_UNLOCKED, 0U);
-	/* Invalidate all branch predictors */
-	mtcp(XREG_CP15_INVAL_BRANCH_ARRAY, 0U);
-
-	dsb(); /* ensure completion of the BP and TLB invalidation */
-	isb(); /* synchronize context on this processor */
 #endif
 }
 #endif

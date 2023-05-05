@@ -87,15 +87,9 @@
 .global _boot
 
 .global __el3_stack
-.global __el2_stack
-.global __el1_stack
-.global __el0_stack
 .global _vector_table
 
 .set EL3_stack,		__el3_stack
-.set EL2_stack,		__el2_stack
-.set EL1_stack,		__el1_stack
-.set EL0_stack,		__el0_stack
 
 .set TT_S1_FAULT,	0x0
 .set TT_S1_TABLE,	0x3
@@ -106,19 +100,108 @@
 .set vector_base,	_vector_table
 .set rvbar_base,	0xFD5C0040
 
-#if defined (VERSAL_NET)
-.set counterfreq,       XPAR_CPU_CORTEXA78_0_TIMESTAMP_CLK_FREQ
-#elif defined (versal)
-.set counterfreq,       XPAR_CPU_CORTEXA72_0_TIMESTAMP_CLK_FREQ
-#else
 .set counterfreq,	XPAR_CPU_CORTEXA53_0_TIMESTAMP_CLK_FREQ
-#endif
-
 .set MODE_EL1, 0x5
 .set DAIF_BIT,	0x1C0
 
 .section .boot,"ax"
 
+/* this initializes the various processor modes */
+
+_prestart:
+_boot:
+	mov      x0, #0
+	mov      x1, #0
+	mov      x2, #0
+	mov      x3, #0
+	mov      x4, #0
+	mov      x5, #0
+	mov      x6, #0
+	mov      x7, #0
+	mov      x8, #0
+	mov      x9, #0
+	mov      x10, #0
+	mov      x11, #0
+	mov      x12, #0
+	mov      x13, #0
+	mov      x14, #0
+	mov      x15, #0
+	mov      x16, #0
+	mov      x17, #0
+	mov      x18, #0
+	mov      x19, #0
+	mov      x20, #0
+	mov      x21, #0
+	mov      x22, #0
+	mov      x23, #0
+	mov      x24, #0
+	mov      x25, #0
+	mov      x26, #0
+	mov      x27, #0
+	mov      x28, #0
+	mov      x29, #0
+	mov      x30, #0
+
+OKToRun:
+
+	mrs	x0, currentEL
+	cmp	x0, #0xC
+	beq	InitEL3
+
+	b 	error			// go to error if current exception level is neither EL3 nor EL1
+
+InitEL3:
+	/*Set vector table base address*/
+	ldr	x1, =vector_base
+	msr	VBAR_EL3,x1
+
+	/* Set reset vector address */
+	/* Get the cpu ID */
+	mrs  x0, MPIDR_EL1
+	and  x0, x0, #0xFF
+	mov  w0, w0
+
+	ldr	 w2, =rvbar_base
+	/* calculate the rvbar base address for particular CPU core */
+	mov	 w3, #0x8
+	mul	 w0, w0, w3
+	add	 w2, w2, w0
+	/* store vector base address to RVBAR */
+	str  x1, [x2]
+
+	/*Define stack pointer for current exception level*/
+	ldr	 x2,=EL3_stack
+	mov	 sp,x2
+
+	/* Enable Trapping of SIMD/FPU register for standalone BSP */
+	mov      x0, #0
+	orr      x0, x0, #(0x1 << 10)
+	msr      CPTR_EL3, x0
+	isb
+
+	/*
+	 * Clear FPUStatus variable to make sure that it contains current
+	 * status of FPU i.e. disabled. In case of a warm restart execution
+	 * when bss sections are not cleared, it may contain previously updated
+	 * value which does not hold true now.
+	 */
+	 ldr x0,=FPUStatus
+	 str xzr, [x0]
+
+	/* Configure SCR_EL3 */
+	mov      w1, #0              	//; Initial value of register is unknown
+	orr      w1, w1, #(1 << 11)  	//; Set ST bit (Secure EL1 can access CNTPS_TVAL_EL1, CNTPS_CTL_EL1 & CNTPS_CVAL_EL1)
+	orr      w1, w1, #(1 << 10)  	//; Set RW bit (EL1 is AArch64, as this is the Secure world)
+	orr      w1, w1, #(1 << 3)   	//; Set EA bit (SError routed to EL3)
+	orr      w1, w1, #(1 << 2)   	//; Set FIQ bit (FIQs routed to EL3)
+	orr      w1, w1, #(1 << 1)   	//; Set IRQ bit (IRQs routed to EL3)
+	msr      SCR_EL3, x1
+
+
+	b 	 _startup		//jump to start
+
+
+#ifdef NOT_USED
 
 /* this initializes the various processor modes */
 
@@ -349,3 +432,4 @@ invalidateCaches_end:
 /**
 * @} End of "addtogroup a53_64_boot_code".
 */
+#endif

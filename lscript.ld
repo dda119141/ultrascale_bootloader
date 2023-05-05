@@ -200,9 +200,6 @@ SECTIONS
    _el3_stack_end = .;
    . += _STACK_SIZE;
    __el3_stack = .;
-   __el2_stack = .;
-   __el1_stack = .;
-   __el0_stack = .;
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
 .handoff_params (NOLOAD) : {
