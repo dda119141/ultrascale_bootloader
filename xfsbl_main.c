@@ -71,6 +71,8 @@ int main(void) {
 #error "FSBL should be generated using only EL3 BSP"
 #endif
 
+	xil_printf("================= In Stage 2 "
+					     "============ \n\r");
 	/**
 	 * Initialize globals.
 	 */

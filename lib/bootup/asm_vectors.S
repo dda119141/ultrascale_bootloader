@@ -13,23 +13,7 @@
 *
 * Ver   Who     Date     Changes
 * ----- ------- -------- ---------------------------------------------------
-* 5.00	pkp	05/21/14 Initial version
-* 6.02  pkp	12/21/16 Added support for floating point access
-* 6.02  pkp	01/22/17 Added support for EL1 non-secure and hypervisor
-*			 baremetal guest
-* 6.4   mus     06/14/17 Fixed bug in IRQInterruptHandler code snippet,
-*                        which checks for the FPEN bit of CPACR_EL1
-* 6.6   mus     01/19/18 Added isb after writing to the cpacr_el1/cptr_el3,
-*                        to ensure enabling/disabling of floating-point unit
-*                        is completed, before any subsequent instruction.
-* 7.5   mus  05/20/21 Fixed speculative execution past ERET and BR instructions.
-*                     As per CVE-2020-13844, Cortex-A72 is affected with
-*                     vulnearability, hence changes are targeted only for Cortex-A72.
-*                     It fixes CR#1083649.
-* 7.7.  asa     03/22/22  Updated FIQ handler to also handle floating/SIMD context.
-*
-* </pre>
-*
+
 * @note
 *
 * None.
@@ -60,7 +44,7 @@
 
 .set FPUContextSize, 528
 
-.macro saveregister
+.macro macro_saveregister
 	stp	X0,X1, [sp,#-0x10]!
 	stp	X2,X3, [sp,#-0x10]!
 	stp	X4,X5, [sp,#-0x10]!
@@ -74,7 +58,7 @@
 	stp 	X29,X30, [sp,#-0x10]!
 .endm
 
-.macro restoreregister
+.macro macro_restoreregister
 	ldp 	X29,X30, [sp], #0x10
 	ldp 	X18,X19, [sp], #0x10
 	ldp	X16,X17, [sp], #0x10
@@ -88,8 +72,7 @@
 	ldp	X0,X1, [sp], #0x10
 .endm
 
-.macro savefloatregister
-
+.macro macro_savefloatregister
 /* Load the floating point context array address from FPUContextBase */
 	ldr	x1,=FPUContextBase
 	ldr	x0, [x1]
@@ -119,8 +102,7 @@
 	str	x0, [x1]
 .endm
 
-.macro restorefloatregister
-
+.macro macro_restorefloatregister
 /* Restore the address of floating point context array from FPUContextBase */
 	ldr	x1,=FPUContextBase
 	ldr	x0, [x1]
@@ -150,19 +132,21 @@
 	str	x0, [x1]
 .endm
 
-.macro exception_return
+.macro macro_exception_return
 	eret
 .endm
 
+/*Each entry is 128 bytes long */
 .org 0
 
 .section .vectors, "a"
 
 _vector_table:
 .set	VBAR, _vector_table
-.org VBAR
 
+.org VBAR
 	b	_boot
+
 .org (VBAR + 0x200)
 	b	SynchronousInterruptHandler
 
@@ -175,9 +159,11 @@ _vector_table:
 .org (VBAR + 0x380)
 	b	SErrorInterruptHandler
 
-
+/* The exception handler for the synchronous
+*  exception from a lower EL or same EL
+*/
 SynchronousInterruptHandler:
-	saveregister
+	macro_saveregister
 
 	/* Check if the Synchronous abort is occurred due to floating point access. */
 	.if (EL3 == 1)
@@ -187,10 +173,10 @@ SynchronousInterruptHandler:
 		mov	x1, #(0x7 << 26)
 		cmp	x0, x1
 	/* If exception is not due to floating point access go to synchronous handler */
-		bne	synchronoushandler
+		bne	subroutine_synchronoushandler
 
 	/*
- 	* If excpetion occurred due to floating point access, Enable the floating point
+ 	* If exception occurred due to floating point access, Enable the floating point
  	* access i.e. do not trap floating point instruction
  	*/
  	.if (EL3 == 1)
@@ -205,7 +191,7 @@ SynchronousInterruptHandler:
 	 */
 	ldr	x0, =FPUStatus
 	ldrb	w1,[x0]
-	cbnz	w1, storefloat
+	cbnz	w1, subroutine_storefloat
 	/*
  	* If the floating point access was not enabled previously, save the status of
  	* floating point accessibility i.e. enabled and store floating point context
@@ -216,21 +202,14 @@ SynchronousInterruptHandler:
 	ldr	x0, =FPUContext
 	ldr	x1, =FPUContextBase
 	str	x0,[x1]
-	b	restorecontext
+	b	subroutine_restorecontext
 
-storefloat:
-	savefloatregister
-	b	restorecontext
 
-synchronoushandler:
-	bl	SynchronousInterrupt
-
-restorecontext:
-	restoreregister
-	exception_return
-
+/* The exception handler for the IRQ exception
+*  exception from a lower EL or same EL
+*/
 IRQInterruptHandler:
-	saveregister
+	macro_saveregister
 /* Save the status of SPSR, ELR and CPTR to stack */
  .if (EL3 == 1)
 	mrs 	x0, CPTR_EL3
@@ -259,7 +238,7 @@ IRQInterruptHandler:
 	ands	x0, x0, #(0x1<<10)
 	bne	RestorePrevState
 .endif
-	restorefloatregister
+	macro_restorefloatregister
 
 	/* Restore the status of SPSR, ELR and CPTR from stack */
 	RestorePrevState:
@@ -271,12 +250,16 @@ IRQInterruptHandler:
 		msr	SPSR_EL3, x2
 	.endif
 
-	restoreregister
-	exception_return
+	macro_restoreregister
+	macro_exception_return
 
 
+
+/* The exception handler for the FIQ
+*  exception from a lower EL or same EL
+*/
 FIQInterruptHandler:
-	saveregister
+	macro_saveregister
 
 	/* Save the status of SPSR, ELR and CPTR to stack */
 	.if (EL3 == 1)
@@ -303,27 +286,43 @@ FIQInterruptHandler:
 	.if (EL3 == 1)
 		mrs	x0, CPTR_EL3
 		ands	x0, x0, #(0x1<<10)
-		bne	RestorePrevStatefiq
+		bne	subroutine_restorePrevStatefiq
 	.endif
-	restorefloatregister
+	macro_restorefloatregister
 
-	/* Restore the status of SPSR, ELR and CPTR from stack */
-RestorePrevStatefiq:
+/* The exception handler for the system error
+*  exception from a lower EL or same EL
+*/
+SErrorInterruptHandler:
+	macro_saveregister
+	bl      SErrorInterrupt
+	macro_restoreregister
+	macro_exception_return
+
+/* store floating point context */
+subroutine_storefloat:
+	macro_savefloatregister
+	b	subroutine_restorecontext
+
+/* synchronous handler */
+subroutine_synchronoushandler:
+	bl	SynchronousInterrupt
+
+subroutine_restorecontext:
+	macro_restoreregister
+	macro_exception_return
+
+/* Restore the status of SPSR, ELR and CPTR from stack */
+subroutine_restorePrevStatefiq:
 	ldr	x2,[sp],0x10
 	ldp	x0, x1, [sp],0x10
- .if (EL3 == 1)
+.if (EL3 == 1)
 	msr	CPTR_EL3, x0
 	msr	ELR_EL3, x1
 	msr	SPSR_EL3, x2
 .endif
-	restoreregister
-	exception_return
-
-SErrorInterruptHandler:
-	saveregister
-	bl      SErrorInterrupt
-	restoreregister
-	exception_return
+	macro_restoreregister
+	macro_exception_return
 
 
 .align 8

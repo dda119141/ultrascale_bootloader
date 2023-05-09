@@ -152,7 +152,7 @@ OKToRun:
 
 InitEL3:
 	/*Set vector table base address*/
-	ldr	x1, =vector_base
+	ldr	x1, = vector_base
 	msr	VBAR_EL3,x1
 
 	/* Set reset vector address */
@@ -188,6 +188,10 @@ InitEL3:
 	 ldr x0,=FPUStatus
 	 str xzr, [x0]
 
+	/* Asynchronous exceptoin routing determines which exception level is used to
+	 * handle an exception.
+	 * To route an asynchronous exception to EL3, SCR_EL3 needs to be set
+	 */
 	/* Configure SCR_EL3 */
 	mov      w1, #0              	//; Initial value of register is unknown
 	orr      w1, w1, #(1 << 11)  	//; Set ST bit (Secure EL1 can access CNTPS_TVAL_EL1, CNTPS_CTL_EL1 & CNTPS_CVAL_EL1)
@@ -250,7 +254,7 @@ OKToRun:
 InitEL3:
 .if (EL3 == 1)
 	/*Set vector table base address*/
-	ldr	x1, =vector_base
+	ldr	x1, = vector_base
 	msr	VBAR_EL3,x1
 
 	/* Set reset vector address */

@@ -38,84 +38,30 @@
 #include "xparameters.h"
 #include "bspconfig.h"
 	.file	"xil-crt0.S"
-	.section ".got2","aw"
-	.align	2
-
-	.text
-.Lsbss_start:
-	.quad	__sbss_start
-
-.Lsbss_end:
-	.quad	__sbss_end
-
-.Lbss_start:
-	.quad	__bss_start__
-
-.Lbss_end:
-	.quad	__bss_end__
 
 
-.set APU_PWRCTL,	0xFD5C0090
+.globl	_startup
 
-	.globl	_startup
 _startup:
 	mov	x0, #0
 
-	/* clear sbss */
-	ldr 	x1,.Lsbss_start		/* calculate beginning of the SBSS */
-	ldr	x2,.Lsbss_end		/* calculate end of the SBSS */
+// clear bss
+    ldr     x5, =__bss_start
+	mov     x9, #0
+    ldr     x9, =__bss_end
+	sub 	x6, x9, x5 /* calculate bss size */
+/*    ldr     w6, =__bss_size */
 
-.Lloop_sbss:
-	cmp	x1,x2
-	bge	.Lenclsbss		/* If no SBSS, no clearing required */
-	str	x0, [x1], #8
-	b	.Lloop_sbss
-
-.Lenclsbss:
-	/* clear bss */
-	ldr	x1,.Lbss_start		/* calculate beginning of the BSS */
-	ldr	x2,.Lbss_end		/* calculate end of the BSS */
-
-.Lloop_bss:
-	cmp	x1,x2
-	bge	.Lenclbss		/* If no BSS, no clearing required */
-	str	x0, [x1], #8
-	b	.Lloop_bss
-
-.Lenclbss:
-#ifdef MAX_TODO
-	/* run global constructors */
-	bl __libc_init_array
-#endif
-	/* Reset and start Triple Timer Counter */
-	#if defined (SLEEP_TIMER_BASEADDR)
-	bl XTime_StartTTCTimer
-	#endif
-
-	/* Set E, C and D bits */
-	mrs x1, PMCR_EL0
-	orr x1, x1, #(0x1 << 0)
-	orr x1, x1, #(0x1 << 2)
-	orr x1, x1, #(0x1 << 3)
-	msr PMCR_EL0, x1
+1:	cbz     w6, 2f
+	str     xzr, [x5], #8
+	sub     w6, w6, #1
+	cbnz    w6, 1b
 
 	/* make sure argc and argv are valid */
-	mov	x0, #0
+2:	mov	x0, #0
 	mov	x1, #0
 
-#ifdef XCLOCKING
-	bl	Xil_ClockInit
-#endif
+//endless_loop:
+//	b endless_loop
+
 	bl	main			/* Jump to main C code */
-
-#ifdef MAX_TODO
-	/* Cleanup global constructors */
-	bl __libc_fini_array
-#endif
-	bl	exit
-
-.Lexit:	/* should never get here */
-	b .Lexit
-
-.Lstart:
-	.size	_startup,.Lstart-_startup
