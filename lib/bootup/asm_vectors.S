@@ -228,16 +228,16 @@ IRQInterruptHandler:
 	isb
 
 	bl	IRQInterrupt
+
 /*
  * If floating point access is enabled during interrupt handling,
  * restore floating point registers.
  */
-
-.if (EL3 == 1)
-	mrs	x0, CPTR_EL3
-	ands	x0, x0, #(0x1<<10)
-	bne	RestorePrevState
-.endif
+	.if (EL3 == 1)
+		mrs	x0, CPTR_EL3
+		ands	x0, x0, #(0x1<<10)
+		bne	RestorePrevState
+	.endif
 	macro_restorefloatregister
 
 	/* Restore the status of SPSR, ELR and CPTR from stack */

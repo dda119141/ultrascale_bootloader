@@ -71,68 +71,6 @@ void IRQInterrupt(void)
 					XIL_EXCEPTION_ID_IRQ_INT].Data);
 }
 
-#if !defined (__aarch64__)
-/*****************************************************************************/
-/**
-*
-* This is the C level wrapper for the Undefined exception called from the
-* vectors.s file.
-*
-* @return	None.
-*
-******************************************************************************/
-void UndefinedException(void)
-{
-	XExc_VectorTable[XIL_EXCEPTION_ID_UNDEFINED_INT].Handler(XExc_VectorTable[
-					XIL_EXCEPTION_ID_UNDEFINED_INT].Data);
-}
-
-/*****************************************************************************/
-/**
-*
-* This is the C level wrapper for the SW Interrupt called from the vectors.s
-* file.
-*
-* @return	None.
-*
-******************************************************************************/
-void SWInterrupt(void)
-{
-	XExc_VectorTable[XIL_EXCEPTION_ID_SWI_INT].Handler(XExc_VectorTable[
-					XIL_EXCEPTION_ID_SWI_INT].Data);
-}
-
-/*****************************************************************************/
-/**
-*
-* This is the C level wrapper for the DataAbort Interrupt called from the
-* vectors.s file.
-*
-* @return	None.
-*
-******************************************************************************/
-void DataAbortInterrupt(void)
-{
-	XExc_VectorTable[XIL_EXCEPTION_ID_DATA_ABORT_INT].Handler(
-		XExc_VectorTable[XIL_EXCEPTION_ID_DATA_ABORT_INT].Data);
-}
-
-/*****************************************************************************/
-/**
-*
-* This is the C level wrapper for the PrefetchAbort Interrupt called from the
-* vectors.s file.
-*
-* @return	None.
-*
-******************************************************************************/
-void PrefetchAbortInterrupt(void)
-{
-	XExc_VectorTable[XIL_EXCEPTION_ID_PREFETCH_ABORT_INT].Handler(
-		XExc_VectorTable[XIL_EXCEPTION_ID_PREFETCH_ABORT_INT].Data);
-}
-#else
-
 /*****************************************************************************/
 /**
 *
@@ -163,4 +101,3 @@ void SErrorInterrupt(void)
 		XExc_VectorTable[XIL_EXCEPTION_ID_SERROR_ABORT_INT].Data);
 }
 
-#endif

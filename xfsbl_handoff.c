@@ -94,7 +94,8 @@ extern PTRSIZE TcmSkipAddress;
 #endif
 extern u32 SdCdnRegVal;
 
-static u32 XFsbl_Is32BitCpu(u32 CpuSettings) {
+static u32 XFsbl_Is32BitCpu(u32 CpuSettings)
+{
 	u32 Status;
 	u32 CpuId;
 	u32 ExecState;
@@ -134,7 +135,8 @@ static u32 XFsbl_Is32BitCpu(u32 CpuSettings) {
  *
  *****************************************************************************/
 
-static u32 XFsbl_SetCpuPwrSettings(u32 CpuSettings, u32 Flags) {
+static u32 XFsbl_SetCpuPwrSettings(u32 CpuSettings, u32 Flags)
+{
 	u32 RegValue;
 	u32 Status;
 	u32 CpuId;
@@ -148,397 +150,367 @@ static u32 XFsbl_SetCpuPwrSettings(u32 CpuSettings, u32 Flags) {
 		CpuId = CpuSettings & XIH_PH_ATTRB_DEST_CPU_MASK;
 		ExecState = CpuSettings & XIH_PH_ATTRB_A53_EXEC_ST_MASK;
 		switch (CpuId) {
-			case XIH_PH_ATTRB_DEST_CPU_A53_0:
+		case XIH_PH_ATTRB_DEST_CPU_A53_0:
 
-				PwrStateMask =
-				    PMU_GLOBAL_PWR_STATE_ACPU0_MASK |
-				    PMU_GLOBAL_PWR_STATE_FP_MASK |
-				    PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
+			PwrStateMask = PMU_GLOBAL_PWR_STATE_ACPU0_MASK |
+				       PMU_GLOBAL_PWR_STATE_FP_MASK |
+				       PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
 
-				Status = XFsbl_PowerUpIsland(PwrStateMask);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_A53_0_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_A53_0_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(PwrStateMask);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_A53_0_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_A53_0_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Set to Aarch32 if enabled
 				 */
-				if (ExecState ==
-				    XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
-					RegValue = XFsbl_In32(APU_CONFIG_0);
-					RegValue &=
-					    ~(APU_CONFIG_0_AA64N32_MASK_CPU0);
-					XFsbl_Out32(APU_CONFIG_0, RegValue);
-				}
+			if (ExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
+				RegValue = XFsbl_In32(APU_CONFIG_0);
+				RegValue &= ~(APU_CONFIG_0_AA64N32_MASK_CPU0);
+				XFsbl_Out32(APU_CONFIG_0, RegValue);
+			}
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
-				RegValue |=
-				    (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
+			RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
+			RegValue |= (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
 				     CRF_APB_ACPU_CTRL_CLKACT_HALF_MASK);
-				XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
+			XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
 
-				/**
+			/**
 				 * Release reset
 				 */
-				RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
-				RegValue &= ~(
-				    CRF_APB_RST_FPD_APU_ACPU0_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_ACPU0_PWRON_RESET_MASK);
-				XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
+			RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
+			RegValue &=
+				~(CRF_APB_RST_FPD_APU_ACPU0_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_ACPU0_PWRON_RESET_MASK);
+			XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
 
-				break;
+			break;
 
-			case XIH_PH_ATTRB_DEST_CPU_A53_1:
+		case XIH_PH_ATTRB_DEST_CPU_A53_1:
 
-				PwrStateMask =
-				    PMU_GLOBAL_PWR_STATE_ACPU1_MASK |
-				    PMU_GLOBAL_PWR_STATE_FP_MASK |
-				    PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
+			PwrStateMask = PMU_GLOBAL_PWR_STATE_ACPU1_MASK |
+				       PMU_GLOBAL_PWR_STATE_FP_MASK |
+				       PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
 
-				Status = XFsbl_PowerUpIsland(PwrStateMask);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_A53_1_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_A53_1_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(PwrStateMask);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_A53_1_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_A53_1_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Set to Aarch32 if enabled
 				 */
-				if (ExecState ==
-				    XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
-					RegValue = XFsbl_In32(APU_CONFIG_0);
-					RegValue &=
-					    ~(APU_CONFIG_0_AA64N32_MASK_CPU1);
-					XFsbl_Out32(APU_CONFIG_0, RegValue);
-				}
+			if (ExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
+				RegValue = XFsbl_In32(APU_CONFIG_0);
+				RegValue &= ~(APU_CONFIG_0_AA64N32_MASK_CPU1);
+				XFsbl_Out32(APU_CONFIG_0, RegValue);
+			}
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
-				RegValue |=
-				    (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
+			RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
+			RegValue |= (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
 				     CRF_APB_ACPU_CTRL_CLKACT_HALF_MASK);
-				XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
+			XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
 
-				/**
+			/**
 				 * Release reset
 				 */
-				RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
-				RegValue &= ~(
-				    CRF_APB_RST_FPD_APU_ACPU1_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_ACPU1_PWRON_RESET_MASK);
-				XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
+			RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
+			RegValue &=
+				~(CRF_APB_RST_FPD_APU_ACPU1_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_ACPU1_PWRON_RESET_MASK);
+			XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
 
-				break;
+			break;
 
-			case XIH_PH_ATTRB_DEST_CPU_A53_2:
+		case XIH_PH_ATTRB_DEST_CPU_A53_2:
 
-				PwrStateMask =
-				    PMU_GLOBAL_PWR_STATE_ACPU2_MASK |
-				    PMU_GLOBAL_PWR_STATE_FP_MASK |
-				    PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
+			PwrStateMask = PMU_GLOBAL_PWR_STATE_ACPU2_MASK |
+				       PMU_GLOBAL_PWR_STATE_FP_MASK |
+				       PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
 
-				Status = XFsbl_PowerUpIsland(PwrStateMask);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_A53_2_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_A53_2_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(PwrStateMask);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_A53_2_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_A53_2_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Set to Aarch32 if enabled
 				 */
-				if (ExecState ==
-				    XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
-					RegValue = XFsbl_In32(APU_CONFIG_0);
-					RegValue &=
-					    ~(APU_CONFIG_0_AA64N32_MASK_CPU2);
-					XFsbl_Out32(APU_CONFIG_0, RegValue);
-				}
+			if (ExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
+				RegValue = XFsbl_In32(APU_CONFIG_0);
+				RegValue &= ~(APU_CONFIG_0_AA64N32_MASK_CPU2);
+				XFsbl_Out32(APU_CONFIG_0, RegValue);
+			}
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
-				RegValue |=
-				    (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
+			RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
+			RegValue |= (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
 				     CRF_APB_ACPU_CTRL_CLKACT_HALF_MASK);
-				XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
+			XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
 
-				/**
+			/**
 				 * Release reset
 				 */
-				RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
-				RegValue &= ~(
-				    CRF_APB_RST_FPD_APU_ACPU2_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_ACPU2_PWRON_RESET_MASK);
+			RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
+			RegValue &=
+				~(CRF_APB_RST_FPD_APU_ACPU2_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_ACPU2_PWRON_RESET_MASK);
 
-				XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
+			XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
 
-				break;
+			break;
 
-			case XIH_PH_ATTRB_DEST_CPU_A53_3:
+		case XIH_PH_ATTRB_DEST_CPU_A53_3:
 
-				PwrStateMask =
-				    PMU_GLOBAL_PWR_STATE_ACPU3_MASK |
-				    PMU_GLOBAL_PWR_STATE_FP_MASK |
-				    PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
+			PwrStateMask = PMU_GLOBAL_PWR_STATE_ACPU3_MASK |
+				       PMU_GLOBAL_PWR_STATE_FP_MASK |
+				       PMU_GLOBAL_PWR_STATE_L2_BANK0_MASK;
 
-				Status = XFsbl_PowerUpIsland(PwrStateMask);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_A53_3_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_A53_3_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(PwrStateMask);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_A53_3_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_A53_3_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Set to Aarch32 if enabled
 				 */
-				if (ExecState ==
-				    XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
-					RegValue = XFsbl_In32(APU_CONFIG_0);
-					RegValue &=
-					    ~(APU_CONFIG_0_AA64N32_MASK_CPU3);
-					XFsbl_Out32(APU_CONFIG_0, RegValue);
-				}
+			if (ExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
+				RegValue = XFsbl_In32(APU_CONFIG_0);
+				RegValue &= ~(APU_CONFIG_0_AA64N32_MASK_CPU3);
+				XFsbl_Out32(APU_CONFIG_0, RegValue);
+			}
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
-				RegValue |=
-				    (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
+			RegValue = XFsbl_In32(CRF_APB_ACPU_CTRL);
+			RegValue |= (CRF_APB_ACPU_CTRL_CLKACT_FULL_MASK |
 				     CRF_APB_ACPU_CTRL_CLKACT_HALF_MASK);
-				XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
+			XFsbl_Out32(CRF_APB_ACPU_CTRL, RegValue);
 
-				/**
+			/**
 				 * Release reset
 				 */
-				RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
-				RegValue &= ~(
-				    CRF_APB_RST_FPD_APU_ACPU3_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
-				    CRF_APB_RST_FPD_APU_ACPU3_PWRON_RESET_MASK);
+			RegValue = XFsbl_In32(CRF_APB_RST_FPD_APU);
+			RegValue &=
+				~(CRF_APB_RST_FPD_APU_ACPU3_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_APU_L2_RESET_MASK |
+				  CRF_APB_RST_FPD_APU_ACPU3_PWRON_RESET_MASK);
 
-				XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
+			XFsbl_Out32(CRF_APB_RST_FPD_APU, RegValue);
 
-				break;
+			break;
 
-			case XIH_PH_ATTRB_DEST_CPU_R5_0:
+		case XIH_PH_ATTRB_DEST_CPU_R5_0:
 
-				Status = XFsbl_PowerUpIsland(
-				    PMU_GLOBAL_PWR_STATE_R5_0_MASK);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_R5_0_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_R5_0_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(
+				PMU_GLOBAL_PWR_STATE_R5_0_MASK);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_R5_0_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_R5_0_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Place R5, TCM's in split mode
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-				RegValue |= (RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
-				RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
-				RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
-				XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+			RegValue |= (RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
+			RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
+			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
+			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-				/**
+			/**
 				 * Place R5-0 in HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-				RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
-				XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+			RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
+			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-				RegValue |= (CRL_APB_CPU_R5_CTRL_CLKACT_MASK);
-				XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+			RegValue |= (CRL_APB_CPU_R5_CTRL_CLKACT_MASK);
+			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-				/**
+			/**
 				 * Provide some delay,
 				 * so that clock propagates properly.
 				 */
-				(void)usleep(0x50U);
+			(void)usleep(0x50U);
 
-				/**
+			/**
 				 * Release reset to R5-0
 				 */
-				RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-				XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
 
-				/**
+			/**
 				 * Take R5-0 out of HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-				RegValue |= RPU_RPU_0_CFG_NCPUHALT_MASK;
-				XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
-				break;
+			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+			RegValue |= RPU_RPU_0_CFG_NCPUHALT_MASK;
+			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+			break;
 
-			case XIH_PH_ATTRB_DEST_CPU_R5_1:
+		case XIH_PH_ATTRB_DEST_CPU_R5_1:
 
-				Status = XFsbl_PowerUpIsland(
-				    PMU_GLOBAL_PWR_STATE_R5_1_MASK);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_R5_1_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_R5_1_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(
+				PMU_GLOBAL_PWR_STATE_R5_1_MASK);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_R5_1_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_R5_1_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Place R5, TCM's in split mode
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-				RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
-				RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
-				RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
-				XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+			RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
+			RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
+			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
+			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-				/**
+			/**
 				 * Place R5-1 in HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-				RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
-				XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+			RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
+			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-				RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
-				XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+			RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
+			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-				/**
+			/**
 				 * Provide some delay,
 				 * so that clock propagates properly.
 				 */
-				(void)usleep(0x50U);
+			(void)usleep(0x50U);
 
-				/**
+			/**
 				 * Release reset to R5-1
 				 */
-				RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-				XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
 
-				/**
+			/**
 				 * Take R5-1 out of HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-				RegValue |= RPU_RPU_1_CFG_NCPUHALT_MASK;
-				XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
-				break;
-			case XIH_PH_ATTRB_DEST_CPU_R5_L:
+			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+			RegValue |= RPU_RPU_1_CFG_NCPUHALT_MASK;
+			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+			break;
+		case XIH_PH_ATTRB_DEST_CPU_R5_L:
 
-				Status = XFsbl_PowerUpIsland(
-				    PMU_GLOBAL_PWR_STATE_R5_0_MASK);
-				if (Status != XFSBL_SUCCESS) {
-					Status = XFSBL_ERROR_R5_L_POWER_UP;
-					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_R5_L_POWER_UP\r\n");
-					goto END;
-				}
+			Status = XFsbl_PowerUpIsland(
+				PMU_GLOBAL_PWR_STATE_R5_0_MASK);
+			if (Status != XFSBL_SUCCESS) {
+				Status = XFSBL_ERROR_R5_L_POWER_UP;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_R5_L_POWER_UP\r\n");
+				goto END;
+			}
 
-				/**
+			/**
 				 * Place R5, TCM's in safe mode
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-				RegValue &= ~(RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
-				RegValue |= RPU_RPU_GLBL_CNTL_TCM_COMB_MASK;
-				RegValue |= RPU_RPU_GLBL_CNTL_SLCLAMP_MASK;
-				XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
+			RegValue |= RPU_RPU_GLBL_CNTL_TCM_COMB_MASK;
+			RegValue |= RPU_RPU_GLBL_CNTL_SLCLAMP_MASK;
+			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-				/**
+			/**
 				 * Place R5-0 in HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-				RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
-				XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+			RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
+			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
 
-				/**
+			/**
 				 * Place R5-1 in HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-				RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
-				XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+			RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
+			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
 
-				/**
+			/**
 				 *  Enable the clock
 				 */
-				RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-				RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
-				XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+			RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
+			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-				/**
+			/**
 				 * Provide some delay,
 				 * so that clock propagates properly.
 				 */
-				(void)usleep(0x50U);
+			(void)usleep(0x50U);
 
-				/**
+			/**
 				 * Release reset to R5-0, R5-1
 				 */
-				RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
-				RegValue &=
-				    ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-				XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
+			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
 
-				/**
+			/**
 				 * Take R5-0 out of HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-				RegValue |= RPU_RPU_0_CFG_NCPUHALT_MASK;
-				XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+			RegValue |= RPU_RPU_0_CFG_NCPUHALT_MASK;
+			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
 
-				/**
+			/**
 				 * Take R5-1 out of HALT state
 				 */
-				RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-				RegValue |= RPU_RPU_1_CFG_NCPUHALT_MASK;
-				XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
-				break;
+			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+			RegValue |= RPU_RPU_1_CFG_NCPUHALT_MASK;
+			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+			break;
 
-			default:
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "XFSBL_ERROR_HANDOFF_CPUID\n\r");
-				Status = XFSBL_ERROR_HANDOFF_CPUID;
-				break;
+		default:
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "XFSBL_ERROR_HANDOFF_CPUID\n\r");
+			Status = XFSBL_ERROR_HANDOFF_CPUID;
+			break;
 		}
 
 	} else {
@@ -561,7 +533,8 @@ END:
  *
  *
  *****************************************************************************/
-void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags) {
+void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags)
+{
 	u32 RegVal;
 
 	/*
@@ -600,7 +573,8 @@ void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags) {
  *
  *****************************************************************************/
 static void XFsbl_UpdateResetVector(u64 HandOffAddress, u32 CpuSettings,
-				    u32 HandoffType, u32 Vector) {
+				    u32 HandoffType, u32 Vector)
+{
 	u32 HandOffAddressLow;
 	u32 HandOffAddressHigh;
 	u32 LowAddressReg;
@@ -674,31 +648,31 @@ static void XFsbl_UpdateResetVector(u64 HandOffAddress, u32 CpuSettings,
 
 		HandOffAddressLow = (u32)(HandOffAddress & 0xFFFFFFFFU);
 		HandOffAddressHigh =
-		    (u32)((HandOffAddress >> 32) & 0xFFFFFFFFU);
+			(u32)((HandOffAddress >> 32) & 0xFFFFFFFFU);
 		switch (CpuId) {
-			case XIH_PH_ATTRB_DEST_CPU_A53_0:
-				LowAddressReg = APU_RVBARADDR0L;
-				HighAddressReg = APU_RVBARADDR0H;
-				break;
-			case XIH_PH_ATTRB_DEST_CPU_A53_1:
-				LowAddressReg = APU_RVBARADDR1L;
-				HighAddressReg = APU_RVBARADDR1H;
-				break;
-			case XIH_PH_ATTRB_DEST_CPU_A53_2:
-				LowAddressReg = APU_RVBARADDR2L;
-				HighAddressReg = APU_RVBARADDR2H;
-				break;
-			case XIH_PH_ATTRB_DEST_CPU_A53_3:
-				LowAddressReg = APU_RVBARADDR3L;
-				HighAddressReg = APU_RVBARADDR3H;
-				break;
-			default:
-				/**
+		case XIH_PH_ATTRB_DEST_CPU_A53_0:
+			LowAddressReg = APU_RVBARADDR0L;
+			HighAddressReg = APU_RVBARADDR0H;
+			break;
+		case XIH_PH_ATTRB_DEST_CPU_A53_1:
+			LowAddressReg = APU_RVBARADDR1L;
+			HighAddressReg = APU_RVBARADDR1H;
+			break;
+		case XIH_PH_ATTRB_DEST_CPU_A53_2:
+			LowAddressReg = APU_RVBARADDR2L;
+			HighAddressReg = APU_RVBARADDR2H;
+			break;
+		case XIH_PH_ATTRB_DEST_CPU_A53_3:
+			LowAddressReg = APU_RVBARADDR3L;
+			HighAddressReg = APU_RVBARADDR3H;
+			break;
+		default:
+			/**
 				 * error can be triggered here
 				 */
-				LowAddressReg = 0U;
-				HighAddressReg = 0U;
-				break;
+			LowAddressReg = 0U;
+			HighAddressReg = 0U;
+			break;
 		}
 		XFsbl_Out32(LowAddressReg, HandOffAddressLow);
 		XFsbl_Out32(HighAddressReg, HandOffAddressHigh);
@@ -724,8 +698,9 @@ static void XFsbl_UpdateResetVector(u64 HandOffAddress, u32 CpuSettings,
  *
  *****************************************************************************/
 
-u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
-		  u32 EarlyHandoff) {
+u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
+		  u32 EarlyHandoff)
+{
 	u32 Status;
 	u32 CpuIndex;
 	u32 CpuId;
@@ -736,13 +711,13 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 	u32 RunningCpuExecState = 0U;
 	u32 RunningCpuHandoffAddressPresent = FALSE;
 	u32 CpuNeedsEarlyHandoff;
-	const XFsblPs_PartitionHeader* PartitionHeader;
+	const XFsblPs_PartitionHeader *PartitionHeader;
 	static u32 CpuIndexEarlyHandoff = 0;
 
 	/* Restoring the SD card detection signal */
 	XFsbl_Out32(IOU_SLCR_SD_CDN_CTRL, SdCdnRegVal);
 	PartitionHeader =
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
 
 	if (FsblInstancePtr->ResetReason == XFSBL_PS_ONLY_RESET) {
 		/**Remove PS-PL isolation to allow u-boot and linux to access
@@ -833,7 +808,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 
 	while (CpuIndex < FsblInstancePtr->HandoffCpuNo) {
 		CpuSettings =
-		    FsblInstancePtr->HandoffValues[CpuIndex].CpuSettings;
+			FsblInstancePtr->HandoffValues[CpuIndex].CpuSettings;
 
 		CpuId = CpuSettings & XIH_PH_ATTRB_DEST_CPU_MASK;
 		ExecState = CpuSettings & XIH_PH_ATTRB_A53_EXEC_ST_MASK;
@@ -864,8 +839,8 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				Status = XFsbl_CheckSupportedCpu(CpuId);
 				if (XFSBL_SUCCESS != Status) {
 					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_UNAVAILABLE_CPU\n\r");
+						DEBUG_GENERAL,
+						"XFSBL_ERROR_UNAVAILABLE_CPU\n\r");
 					Status = XFSBL_ERROR_UNAVAILABLE_CPU;
 					goto END;
 				}
@@ -876,7 +851,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				 * Take cpu out of reset
 				 */
 				Status = XFsbl_SetCpuPwrSettings(
-				    CpuSettings, XFSBL_CPU_POWER_UP);
+					CpuSettings, XFSBL_CPU_POWER_UP);
 				if (XFSBL_SUCCESS != Status) {
 					XFsbl_Printf(DEBUG_GENERAL,
 						     "Power Up "
@@ -884,8 +859,8 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 						     CpuId);
 
 					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_PWR_UP_CPU\n\r");
+						DEBUG_GENERAL,
+						"XFSBL_ERROR_PWR_UP_CPU\n\r");
 					Status = XFSBL_ERROR_PWR_UP_CPU;
 					goto END;
 				}
@@ -893,19 +868,21 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				/**
 				 * Read the handoff address from structure
 				 */
-				HandoffAddress = (u64)FsblInstancePtr
-						     ->HandoffValues[CpuIndex]
-						     .HandoffAddress;
+				HandoffAddress =
+					(u64)FsblInstancePtr
+						->HandoffValues[CpuIndex]
+						.HandoffAddress;
 
 				/**
 				 * Update the handoff address at reset vector
 				 * address
 				 */
 				XFsbl_UpdateResetVector(
-				    HandoffAddress, CpuSettings,
-				    OTHER_CPU_HANDOFF,
-				    XFsbl_GetVectorLocation(PartitionHeader) >>
-					XIH_ATTRB_VECTOR_LOCATION_SHIFT);
+					HandoffAddress, CpuSettings,
+					OTHER_CPU_HANDOFF,
+					XFsbl_GetVectorLocation(
+						PartitionHeader) >>
+						XIH_ATTRB_VECTOR_LOCATION_SHIFT);
 
 				XFsbl_Printf(DEBUG_INFO,
 					     "CPU 0x%0lx reset release, "
@@ -918,7 +895,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				 * Take CPU out of reset
 				 */
 				Status = XFsbl_SetCpuPwrSettings(
-				    CpuSettings, XFSBL_CPU_SWRST);
+					CpuSettings, XFSBL_CPU_SWRST);
 				if (XFSBL_SUCCESS != Status) {
 					goto END;
 				}
@@ -930,9 +907,9 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 					RunningCpuHandoffAddressPresent = TRUE;
 				}
 				RunningCpuHandoffAddress =
-				    (u64)FsblInstancePtr
-					->HandoffValues[CpuIndex]
-					.HandoffAddress;
+					(u64)FsblInstancePtr
+						->HandoffValues[CpuIndex]
+						.HandoffAddress;
 				RunningCpuExecState = ExecState;
 
 				/**
@@ -947,22 +924,22 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				    (ExecState ==
 				     XIH_PH_ATTRB_A53_EXEC_ST_AA32)) {
 					Status =
-					    XFSBL_ERROR_UNSUPPORTED_HANDOFF;
+						XFSBL_ERROR_UNSUPPORTED_HANDOFF;
 					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
-					    "A53-0 64 bit to 32 bit\n\r");
+						DEBUG_GENERAL,
+						"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
+						"A53-0 64 bit to 32 bit\n\r");
 					goto END;
 				} else if ((FsblInstancePtr->A53ExecState ==
 					    XIH_PH_ATTRB_A53_EXEC_ST_AA32) &&
 					   (ExecState ==
 					    XIH_PH_ATTRB_A53_EXEC_ST_AA64)) {
 					Status =
-					    XFSBL_ERROR_UNSUPPORTED_HANDOFF;
+						XFSBL_ERROR_UNSUPPORTED_HANDOFF;
 					XFsbl_Printf(
-					    DEBUG_GENERAL,
-					    "XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
-					    "A53-0 32 bit to 64 bit\n\r");
+						DEBUG_GENERAL,
+						"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
+						"A53-0 32 bit to 64 bit\n\r");
 					goto END;
 				} else {
 					/* for MISRA C compliance */
@@ -977,7 +954,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 
 			if (PartitionNum <
 			    (FsblInstancePtr->ImageHeader.ImageHeaderTable
-				 .NoOfPartitions -
+				     .NoOfPartitions -
 			     1U)) {
 				/**
 				 * If this is not the last handoff CPU, return
@@ -985,7 +962,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 				 * partitions in stage 3
 				 */
 				CpuIndexEarlyHandoff++;
-				Status = XFSBL_STATUS_CONTINUE_PARTITION_LOAD;
+				Status = STATUS_PARTITION_LOAD_IN_PROGRESS;
 			} else {
 				/**
 				 * Early handoff to all required CPUs is done,
@@ -1016,7 +993,7 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 		 * This will store partitions vectors to LOVEC
 		 * TcmSkipAddress is always 0x0,TcmSkipLength is 32.
 		 */
-		(void)XFsbl_MemCpy((u8*)TcmSkipAddress, (u8*)R5LovecBuffer,
+		(void)XFsbl_MemCpy((u8 *)TcmSkipAddress, (u8 *)R5LovecBuffer,
 				   TcmSkipLength);
 		XFsbl_Printf(DEBUG_DETAILED,
 			     "XFsbl_Handoff:Restored R5LovecBuffer to LOVEC "
@@ -1042,9 +1019,9 @@ u32 XFsbl_Handoff(const XFsblPs* FsblInstancePtr, u32 PartitionNum,
 	 */
 	if (RunningCpuHandoffAddressPresent == TRUE) {
 		XFsbl_Printf(
-		    DEBUG_INFO,
-		    "Running Cpu Handoff address: 0x%0lx, Exec State: %0lx\n\r",
-		    (PTRSIZE)RunningCpuHandoffAddress, RunningCpuExecState);
+			DEBUG_INFO,
+			"Running Cpu Handoff address: 0x%0lx, Exec State: %0lx\n\r",
+			(PTRSIZE)RunningCpuHandoffAddress, RunningCpuExecState);
 		if (RunningCpuExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32) {
 			XFsbl_HandoffExit(RunningCpuHandoffAddress,
 					  XFSBL_HANDOFFEXIT_32);
@@ -1070,7 +1047,8 @@ END:
  * @return	TRUE if this CPU needs early handoff, and FALSE if not
  *
  *****************************************************************************/
-static u32 XFsbl_CheckEarlyHandoffCpu(u32 CpuId) {
+static u32 XFsbl_CheckEarlyHandoffCpu(u32 CpuId)
+{
 	u32 CpuNeedEarlyHandoff = FALSE;
 #if defined(XFSBL_EARLY_HANDOFF)
 	if ((CpuId == XIH_PH_ATTRB_DEST_CPU_R5_0) ||
@@ -1093,7 +1071,8 @@ static u32 XFsbl_CheckEarlyHandoffCpu(u32 CpuId) {
  * @return	TRUE if this partitions needs early handoff, and FALSE if not
  *
  *****************************************************************************/
-u32 XFsbl_CheckEarlyHandoff(XFsblPs* FsblInstancePtr, u32 PartitionNum) {
+u32 XFsbl_CheckEarlyHandoff(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u32 Status = FALSE;
 #if defined(XFSBL_EARLY_HANDOFF)
 	u32 CpuNeedsEarlyHandoff = FALSE;
@@ -1103,9 +1082,9 @@ u32 XFsbl_CheckEarlyHandoff(XFsblPs* FsblInstancePtr, u32 PartitionNum) {
 	u32 DestinationDevNxt = 0;
 
 	DestinationCpu = XFsbl_GetDestinationCpu(
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
 	DestinationDev = XFsbl_GetDestinationDevice(
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
 	if ((DestinationCpu == XIH_PH_ATTRB_DEST_CPU_NONE) &&
 	    ((DestinationDev == XIH_PH_ATTRB_DEST_DEVICE_PS) ||
 	     (DestinationDev == XIH_PH_ATTRB_DEST_DEVICE_NONE))) {
@@ -1117,11 +1096,11 @@ u32 XFsbl_CheckEarlyHandoff(XFsblPs* FsblInstancePtr, u32 PartitionNum) {
 	    (FsblInstancePtr->ImageHeader.ImageHeaderTable.NoOfPartitions -
 	     1U)) {
 		DestinationCpuNxt = XFsbl_GetDestinationCpu(
-		    &FsblInstancePtr->ImageHeader
-			 .PartitionHeader[PartitionNum + 1]);
+			&FsblInstancePtr->ImageHeader
+				 .PartitionHeader[PartitionNum + 1]);
 		DestinationDevNxt = XFsbl_GetDestinationDevice(
-		    &FsblInstancePtr->ImageHeader
-			 .PartitionHeader[PartitionNum + 1]);
+			&FsblInstancePtr->ImageHeader
+				 .PartitionHeader[PartitionNum + 1]);
 
 		if ((DestinationCpuNxt == XIH_PH_ATTRB_DEST_CPU_NONE) &&
 		    ((DestinationDevNxt == XIH_PH_ATTRB_DEST_DEVICE_PS) ||
@@ -1156,7 +1135,8 @@ u32 XFsbl_CheckEarlyHandoff(XFsblPs* FsblInstancePtr, u32 PartitionNum) {
  *
  *
  *****************************************************************************/
-static u32 XFsbl_ProtectionConfig(void) {
+static u32 XFsbl_ProtectionConfig(void)
+{
 	u32 CfgRegVal1;
 	u32 CfgRegVal3;
 	u32 Status;

@@ -82,7 +82,6 @@ static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_ResetValidation(void);
 static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr);
-static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_DdrEccInit(void);
 static void XFsbl_EnableProgToPL(void);
 static void XFsbl_ClearPendingInterrupts(void);
@@ -110,6 +109,56 @@ extern u32 Iv[XIH_BH_IV_LENGTH / 4U];
 #endif
 u32 SdCdnRegVal;
 
+static void XFsbl_PrintFsblBanner(void)
+{
+	s32 PlatInfo;
+	/**
+   * Print the FSBL Banner
+   */
+#if !defined(XFSBL_PERF) || defined(FSBL_DEBUG) || defined(FSBL_DEBUG_INFO) || \
+	defined(FSBL_DEBUG_DETAILED)
+	XFsbl_Printf(DEBUG_PRINT_ALWAYS,
+		     "Xilinx Zynq MP First Stage Boot Loader \n\r");
+
+	/*
+	XFsbl_Printf(DEBUG_GENERAL, "MultiBootOffset: 0x%0x\r\n",
+		     XFsbl_In32(CSU_CSU_MULTI_BOOT));
+*/
+
+	if (FsblInstance.ResetReason == XFSBL_PS_ONLY_RESET) {
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "Reset Mode	:	PS Only Reset\r\n");
+	} else if (XFSBL_MASTER_ONLY_RESET == FsblInstance.ResetReason) {
+		XFsbl_Printf(
+			DEBUG_GENERAL,
+			"Reset Mode	:	Master Subsystem Only Reset\r\n");
+	} else if (FsblInstance.ResetReason == XFSBL_SYSTEM_RESET) {
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "Reset Mode	:	System Reset\r\n");
+	} else {
+		/*MISRAC compliance*/
+	}
+#endif
+
+	/**
+   * Print the platform
+   */
+
+	PlatInfo = (s32)XGet_Zynq_UltraMp_Platform_info();
+	if (PlatInfo == XPLAT_ZYNQ_ULTRA_MPQEMU) {
+		XFsbl_Printf(DEBUG_GENERAL, "Platform: QEMU, ");
+	} else if (PlatInfo == XPLAT_ZYNQ_ULTRA_MP) {
+		XFsbl_Printf(DEBUG_GENERAL, "Platform: REMUS, ");
+	} else if (PlatInfo == XPLAT_ZYNQ_ULTRA_MP_SILICON) {
+		XFsbl_Printf(DEBUG_GENERAL, "Platform: Silicon (%d.0), ",
+			     XGetPSVersion_Info() + 1U);
+	} else {
+		XFsbl_Printf(DEBUG_GENERAL, "Platform Not identified \r\n");
+	}
+
+	return;
+}
+
 /****************************************************************************/
 /**
  * This function is used to get the Reset Reason
@@ -121,7 +170,8 @@ u32 SdCdnRegVal;
  * @note
  *
  *****************************************************************************/
-static u32 XFsbl_GetResetReason(void) {
+static u32 XFsbl_GetResetReason(void)
+{
 	u32 Val;
 	u32 Ret;
 
@@ -153,7 +203,8 @@ static u32 XFsbl_GetResetReason(void) {
  * 			- returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr) {
+u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr)
+{
 	u32 Status;
 
 	/**
@@ -185,7 +236,6 @@ u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr) {
 	 * Place AES and SHA engines in reset
 	 */
 	XFsbl_Out32(CSU_AES_RESET, CSU_AES_RESET_RESET_MASK);
-
 	XFsbl_Out32(CSU_SHA_RESET, CSU_SHA_RESET_RESET_MASK);
 
 	/**
@@ -250,21 +300,14 @@ END:
  * @return	returns the error codes described in xfsbl_error.h on any error
  * 			returns XFSBL_SUCCESS on success
  ******************************************************************************/
-u32 XFsbl_BootDeviceInitAndValidate(XFsblPs *FsblInstancePtr) {
+u32 XFsbl_BootDeviceInit(XFsblPs *FsblInstancePtr)
+{
 	u32 Status;
 
 	/**
 	 * Configure the primary boot device
 	 */
 	Status = XFsbl_PrimaryBootDeviceInit(FsblInstancePtr);
-	if (XFSBL_SUCCESS != Status) {
-		goto END;
-	}
-
-	/**
-	 * Read and Validate the header
-	 */
-	Status = XFsbl_ValidateHeader(FsblInstancePtr);
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
@@ -283,7 +326,8 @@ END:
  * @return	None
  *
  ******************************************************************************/
-void XFsbl_EnableProgToPL(void) {
+void XFsbl_EnableProgToPL(void)
+{
 	u32 RegVal = 0x0U;
 
 	/*
@@ -314,11 +358,10 @@ void XFsbl_EnableProgToPL(void) {
  * 			returns XFSBL_SUCCESS on success
  *
  ******************************************************************************/
-static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr) {
+static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr)
+{
 	u32 Status;
 	PTRSIZE ClusterId;
-	u32 RegValue;
-	u32 Index = 0U;
 	u32 FsblProcType = 0;
 	char DevName[PART_NAME_LEN_MAX];
 
@@ -361,40 +404,6 @@ static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr) {
 		/* Running on A53 64-bit */
 		XFsbl_Printf(DEBUG_GENERAL, "(64-bit) Processor");
 		FsblInstancePtr->A53ExecState = XIH_PH_ATTRB_A53_EXEC_ST_AA64;
-
-	} else if ((ClusterId & XFSBL_CLUSTER_ID_MASK) == XFSBL_R5_PROCESSOR) {
-		/* A53ExecState is not valid for R5 */
-		FsblInstancePtr->A53ExecState = XIH_INVALID_EXEC_ST;
-
-		RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-		if ((RegValue & RPU_RPU_GLBL_CNTL_SLSPLIT_MASK) == 0U) {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "Running on R5 Processor in Lockstep");
-			FsblInstancePtr->ProcessorID =
-			    XIH_PH_ATTRB_DEST_CPU_R5_L;
-			FsblProcType = XFSBL_RUNNING_ON_R5_L
-				       << XFSBL_STATE_PROC_SHIFT;
-		} else {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "Running on R5-0 Processor");
-			FsblInstancePtr->ProcessorID =
-			    XIH_PH_ATTRB_DEST_CPU_R5_0;
-			FsblProcType = XFSBL_RUNNING_ON_R5_0
-				       << XFSBL_STATE_PROC_SHIFT;
-		}
-
-		/* Update the Low Vector locations in R5 TCM */
-		while (Index < 32U) {
-			XFsbl_Out32(Index, XFSBL_R5_LOVEC_VALUE);
-			Index += 4U;
-		}
-
-		/**
-		 * Make sure that Low Vector locations are written Properly.
-		 * Flush the cache
-		 */
-		Xil_DCacheFlush();
-
 	} else {
 		Status = XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID;
 		XFsbl_Printf(DEBUG_GENERAL,
@@ -438,7 +447,8 @@ END:
  *
  ******************************************************************************/
 
-static u32 XFsbl_ResetValidation(void) {
+static u32 XFsbl_ResetValidation(void)
+{
 	u32 Status;
 	u32 FsblErrorStatus;
 	/**
@@ -475,7 +485,8 @@ static u32 XFsbl_ResetValidation(void) {
  * 			returns XFSBL_SUCCESS on success
  *
  ******************************************************************************/
-static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
+static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr)
+{
 	u32 Status;
 
 	if (FsblInstancePtr->ResetReason != XFSBL_PS_ONLY_RESET) {
@@ -486,8 +497,8 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 		 * Powerup PL (but restore isolation).
 		 */
 		if (XGetPSVersion_Info() <= (u32)XPS_VERSION_2) {
-			Status =
-			    XFsbl_PowerUpIsland(PMU_GLOBAL_PWR_STATE_PL_MASK);
+			Status = XFsbl_PowerUpIsland(
+				PMU_GLOBAL_PWR_STATE_PL_MASK);
 
 			if (Status != XFSBL_SUCCESS) {
 				Status = XFSBL_ERROR_PL_POWER_UP;
@@ -500,7 +511,7 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 			 * isolation removed */
 
 			Status = XFsbl_IsolationRestore(
-			    PMU_GLOBAL_REQ_ISO_INT_EN_PL_NONPCAP_MASK);
+				PMU_GLOBAL_REQ_ISO_INT_EN_PL_NONPCAP_MASK);
 			if (Status != XFSBL_SUCCESS) {
 				Status = XFSBL_ERROR_PMU_GLOBAL_REQ_ISO;
 				XFsbl_Printf(DEBUG_GENERAL,
@@ -532,8 +543,7 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 		goto END;
 	}
 
-#ifdef XFSBL_PS_DDR
-#ifdef XPAR_DYNAMIC_DDR_ENABLED
+#if 0
 	/*
 	 * This function is used for all the ZynqMP boards.
 	 * This function initialize the DDR by fetching the SPD data from
@@ -547,8 +557,6 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 		goto END;
 	}
 #endif
-#endif
-
 	/**
 	 * Forcing the SD card detection signal to bypass the debouncing logic.
 	 * This will ensure that SD controller doesn't end up waiting for long,
@@ -558,10 +566,6 @@ static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr) {
 	XFsbl_Out32(IOU_SLCR_SD_CDN_CTRL,
 		    (IOU_SLCR_SD_CDN_CTRL_SD1_CDN_CTRL_MASK |
 		     IOU_SLCR_SD_CDN_CTRL_SD0_CDN_CTRL_MASK));
-
-	/**
-	 * DDR Check if present
-	 */
 
 	/**
 	 * Poweroff the unused blocks as per PSU
@@ -581,7 +585,8 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *
  ******************************************************************************/
-static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr) {
+static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
+{
 	u32 Status;
 	u32 BootMode;
 
@@ -604,98 +609,90 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr) {
 #else
 
 	switch (BootMode) {
-		/**
+	/**
 		 * For JTAG boot mode, it will be in while loop
 		 */
-		case XFSBL_JTAG_BOOT_MODE: {
-			XFsbl_Printf(DEBUG_GENERAL, "In JTAG Boot Mode \n\r");
-			Status = XFSBL_STATUS_JTAG;
-		} break;
+	case XFSBL_JTAG_BOOT_MODE: {
+		XFsbl_Printf(DEBUG_GENERAL, "In JTAG Boot Mode \n\r");
+		Status = XFSBL_STATUS_JTAG;
+	} break;
 
-		case XFSBL_QSPI24_BOOT_MODE: {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "QSPI 24bit Boot Mode \n\r");
-			/**
+	case XFSBL_QSPI24_BOOT_MODE: {
+		XFsbl_Printf(DEBUG_GENERAL, "QSPI 24bit Boot Mode \n\r");
+		/**
 			 * This bootmode is not supported in this release
 			 */
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-			Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
-		} break;
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
+		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+	} break;
 
-		case XFSBL_QSPI32_BOOT_MODE: {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "QSPI 32 bit Boot Mode \n\r");
-			/**
+	case XFSBL_QSPI32_BOOT_MODE: {
+		XFsbl_Printf(DEBUG_GENERAL, "QSPI 32 bit Boot Mode \n\r");
+		/**
 			 * This bootmode is not supported in this release
 			 */
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-			Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
-		} break;
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
+		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+	} break;
 
-		case XFSBL_SD0_BOOT_MODE:
-		case XFSBL_EMMC_BOOT_MODE: {
-			if (BootMode == XFSBL_SD0_BOOT_MODE) {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "SD0 Boot Mode \n\r");
-			} else {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "eMMC Boot Mode \n\r");
-			}
+	case XFSBL_SD0_BOOT_MODE:
+	case XFSBL_EMMC_BOOT_MODE: {
+		if (BootMode == XFSBL_SD0_BOOT_MODE) {
+			XFsbl_Printf(DEBUG_GENERAL, "SD0 Boot Mode \n\r");
+		} else {
+			XFsbl_Printf(DEBUG_GENERAL, "eMMC Boot Mode \n\r");
+		}
 #ifdef XFSBL_SD_0
-			/**
+		/**
 			 * Update the deviceops structure with necessary values
 			 */
-			FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_SdInit;
-			FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_SdCopy;
-			FsblInstancePtr->DeviceOps.DeviceRelease =
-			    XFsbl_SdRelease;
-			Status = XFSBL_SUCCESS;
+		FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_SdInit;
+		FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_SdCopy;
+		FsblInstancePtr->DeviceOps.DeviceRelease = XFsbl_SdRelease;
+		Status = XFSBL_SUCCESS;
 #else
-			/**
+		/**
 			 * This bootmode is not supported in this release
 			 */
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-			Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
+		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
 #endif
-		} break;
+	} break;
 
-		case XFSBL_SD1_BOOT_MODE:
-		case XFSBL_SD1_LS_BOOT_MODE: {
-			if (BootMode == XFSBL_SD1_BOOT_MODE) {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "SD1 Boot Mode \n\r");
-			} else {
-				XFsbl_Printf(
-				    DEBUG_GENERAL,
-				    "SD1 with level shifter Boot Mode \n\r");
-			}
+	case XFSBL_SD1_BOOT_MODE:
+	case XFSBL_SD1_LS_BOOT_MODE: {
+		if (BootMode == XFSBL_SD1_BOOT_MODE) {
+			XFsbl_Printf(DEBUG_GENERAL, "SD1 Boot Mode \n\r");
+		} else {
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "SD1 with level shifter Boot Mode \n\r");
+		}
 #ifdef XFSBL_SD_1
-			/**
+		/**
 			 * Update the deviceops structure with necessary values
 			 */
-			FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_SdInit;
-			FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_SdCopy;
-			FsblInstancePtr->DeviceOps.DeviceRelease =
-			    XFsbl_SdRelease;
-			Status = XFSBL_SUCCESS;
+		FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_SdInit;
+		FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_SdCopy;
+		FsblInstancePtr->DeviceOps.DeviceRelease = XFsbl_SdRelease;
+		Status = XFSBL_SUCCESS;
 #else
-			/**
+		/**
 			 * This bootmode is not supported in this release
 			 */
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-			Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
+		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
 #endif
-		} break;
+	} break;
 
-		default: {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-			Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
-		} break;
+	default: {
+		XFsbl_Printf(DEBUG_GENERAL,
+			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
+		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+	} break;
 	}
 #endif
 	/**
@@ -719,246 +716,6 @@ END:
 
 /*****************************************************************************/
 /**
- * This function validates the image header
- *
- * @param	FsblInstancePtr is pointer to the XFsbl Instance
- *
- * @return	returns the error codes described in xfsbl_error.h on any error
- * 			returns XFSBL_SUCCESS on success
- *
- ******************************************************************************/
-static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr) {
-	u32 Status;
-	u32 MultiBootOffset;
-	u32 BootHdrAttrb = 0U;
-	u32 FlashImageOffsetAddress;
-	u32 EfuseCtrl;
-	u32 ImageHeaderTableAddressOffset = 0U;
-	u32 FsblEncSts = 0U;
-#ifdef XFSBL_SECURE
-	u32 Size;
-	u32 AcOffset = 0U;
-#endif
-	/**
-	 * Read the Multiboot Register
-	 */
-	MultiBootOffset = XFsbl_In32(CSU_CSU_MULTI_BOOT);
-	XFsbl_Printf(DEBUG_INFO, "Multiboot Reg : 0x%0lx \n\r",
-		     MultiBootOffset);
-
-	/**
-	 *  Calculate the Flash Offset Address
-	 *  For file system based devices, Flash Offset Address should be 0
-	 * always
-	 */
-	if (!((FsblInstancePtr->PrimaryBootDevice == XFSBL_SD0_BOOT_MODE) ||
-	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_EMMC_BOOT_MODE) ||
-	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_SD1_BOOT_MODE) ||
-	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_SD1_LS_BOOT_MODE) ||
-	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_USB_BOOT_MODE))) {
-		FsblInstancePtr->ImageOffsetAddress =
-		    MultiBootOffset * XFSBL_IMAGE_SEARCH_OFFSET;
-	} else {
-		FsblInstancePtr->ImageOffsetAddress = 0U;
-	}
-
-	FlashImageOffsetAddress = FsblInstancePtr->ImageOffsetAddress;
-
-	/* Copy boot header to internal memory */
-	Status = FsblInstancePtr->DeviceOps.DeviceCopy(
-	    FlashImageOffsetAddress, (PTRSIZE)ReadBuffer, XIH_BH_MAX_SIZE);
-	if (XFSBL_SUCCESS != Status) {
-		XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
-		goto END;
-	}
-#ifdef XFSBL_SECURE
-	/* copy IV to local variable */
-	XFsbl_MemCpy(Iv, ReadBuffer + XIH_BH_IV_OFFSET, XIH_BH_IV_LENGTH);
-#endif
-	/**
-	 * Read Boot Image attributes
-	 */
-	BootHdrAttrb =
-	    Xil_In32((UINTPTR)ReadBuffer + XIH_BH_IMAGE_ATTRB_OFFSET);
-	FsblInstancePtr->BootHdrAttributes = BootHdrAttrb;
-
-	/*
-	 * Update PMU Global general storage register5 bit 3 with FSBL
-	 * encryption status if either FSBL encryption status in boot header is
-	 * true or ENC_ONLY eFuse bit is programmed.
-	 *
-	 * FSBL encryption information in boot header:
-	 * If authenticate only bits 5:4 are set, boot image is only RSA signed
-	 * though encryption status in BH is non-zero.
-	 * Boot image is decrypted only when BH encryption status is not 0x0 and
-	 * authenticate only bits value is other than 0x3
-	 */
-	if (((Xil_In32((UINTPTR)ReadBuffer + XIH_BH_ENC_STS_OFFSET) != 0x0U) &&
-	     ((BootHdrAttrb & XIH_BH_IMAGE_ATTRB_AUTH_ONLY_MASK) !=
-	      XIH_BH_IMAGE_ATTRB_AUTH_ONLY_MASK)) ||
-	    ((XFsbl_In32(EFUSE_SEC_CTRL) & EFUSE_SEC_CTRL_ENC_ONLY_MASK) !=
-	     0x0U)) {
-		FsblEncSts = XFsbl_In32(PMU_GLOBAL_GLOB_GEN_STORAGE5) |
-			     XFSBL_FSBL_ENCRYPTED_MASK;
-		XFsbl_Out32(PMU_GLOBAL_GLOB_GEN_STORAGE5, FsblEncSts);
-	}
-
-	/**
-	 * Read the Image Header Table offset from
-	 * Boot Header
-	 */
-	ImageHeaderTableAddressOffset =
-	    Xil_In32((UINTPTR)ReadBuffer + XIH_BH_IH_TABLE_OFFSET);
-
-	XFsbl_Printf(DEBUG_INFO, "Image Header Table Offset 0x%0lx \n\r",
-		     ImageHeaderTableAddressOffset);
-
-	/**
-	 * Read Efuse bit and check Boot Header for Authentication
-	 */
-	EfuseCtrl = XFsbl_In32(EFUSE_SEC_CTRL);
-
-	if (((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0x00) &&
-	    ((BootHdrAttrb & XIH_BH_IMAGE_ATTRB_RSA_MASK) ==
-	     XIH_BH_IMAGE_ATTRB_RSA_MASK)) {
-		Status = XFSBL_ERROR_BH_AUTH_IS_NOTALLOWED;
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "XFSBL_ERROR_BH_AUTH_IS_NOTALLOWED"
-			     " when eFSUE RSA bit is set \n\r");
-		goto END;
-	}
-
-	/* If authentication is enabled */
-	if (((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0U) ||
-	    ((BootHdrAttrb & XIH_BH_IMAGE_ATTRB_RSA_MASK) ==
-	     XIH_BH_IMAGE_ATTRB_RSA_MASK)) {
-		FsblInstancePtr->AuthEnabled = TRUE;
-		XFsbl_Printf(DEBUG_INFO, "Authentication Enabled\r\n");
-#ifdef XFSBL_SECURE
-		/* Read AC offset from Image header table */
-		Status = FsblInstancePtr->DeviceOps.DeviceCopy(
-		    FlashImageOffsetAddress + ImageHeaderTableAddressOffset +
-			XIH_IHT_AC_OFFSET,
-		    (PTRSIZE)&AcOffset, XIH_FIELD_LEN);
-		if (XFSBL_SUCCESS != Status) {
-			XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
-			goto END;
-		}
-		if (AcOffset != 0x00U) {
-			/* Authentication exists copy AC to OCM */
-			Status = FsblInstancePtr->DeviceOps.DeviceCopy(
-			    (FsblInstancePtr->ImageOffsetAddress +
-			     (AcOffset * XIH_PARTITION_WORD_LENGTH)),
-			    (INTPTR)AuthBuffer, XFSBL_AUTH_CERT_MIN_SIZE);
-			if (XFSBL_SUCCESS != Status) {
-				goto END;
-			}
-
-			/* Authenticate boot header */
-			/* When eFUSE RSA enable bit is blown */
-			if ((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0U) {
-				Status = XFsbl_BhAuthentication(
-				    FsblInstancePtr, ReadBuffer,
-				    (PTRSIZE)AuthBuffer, TRUE);
-			}
-			/* When eFUSE RSA bit is not blown */
-			else {
-				Status = XFsbl_BhAuthentication(
-				    FsblInstancePtr, ReadBuffer,
-				    (PTRSIZE)AuthBuffer, FALSE);
-			}
-			if (Status != XST_SUCCESS) {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Failure at boot header "
-					     "authentication\r\n");
-				goto END;
-			}
-
-			/* Authenticate Image header table */
-			/*
-			 * Total size of Image header may vary
-			 * depending on padding so
-			 * size = AC address - Start address;
-			 */
-			Size = (AcOffset * XIH_PARTITION_WORD_LENGTH) -
-			       (ImageHeaderTableAddressOffset);
-			if (Size > sizeof(ReadBuffer)) {
-				Status = XFSBL_ERROR_IMAGE_HEADER_SIZE;
-				goto END;
-			}
-
-			/* Copy the Image header to OCM */
-			Status = FsblInstancePtr->DeviceOps.DeviceCopy(
-			    FsblInstancePtr->ImageOffsetAddress +
-				ImageHeaderTableAddressOffset,
-			    (INTPTR)ImageHdr, Size);
-			if (Status != XFSBL_SUCCESS) {
-				goto END;
-			}
-
-			/* Authenticate the image header */
-			Status = XFsbl_Authentication(
-			    FsblInstancePtr, (PTRSIZE)ImageHdr,
-			    Size + XFSBL_AUTH_CERT_MIN_SIZE,
-			    (PTRSIZE)(AuthBuffer), 0x00U);
-			if (Status != XFSBL_SUCCESS) {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Failure at image header"
-					     " table authentication\r\n");
-				goto END;
-			}
-			/*
-			 * As authentication is success
-			 * verify ACoffset used for authentication
-			 */
-			if (AcOffset !=
-			    Xil_In32((UINTPTR)ImageHdr + XIH_IHT_AC_OFFSET)) {
-				Status = XFSBL_ERROR_IMAGE_HEADER_ACOFFSET;
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Wrong Authentication "
-					     "certificate offset\r\n");
-				goto END;
-			}
-		} else {
-			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_IMAGE_HEADER_ACOFFSET\r\n");
-			Status = XFSBL_ERROR_IMAGE_HEADER_ACOFFSET;
-			goto END;
-		}
-		/*
-		 * Read Image Header and validate Image Header Table
-		 * Here we need to use memcpy to copy partition headers
-		 * from OCM which we already copied.
-		 */
-		Status = XFsbl_ReadImageHeader(&FsblInstancePtr->ImageHeader,
-					       NULL, (UINTPTR)ImageHdr,
-					       FsblInstancePtr->ProcessorID,
-					       ImageHeaderTableAddressOffset);
-		if (XFSBL_SUCCESS != Status) {
-			goto END;
-		}
-#else
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "XFSBL_ERROR_SECURE_NOT_ENABLED\r\n");
-		Status = XFSBL_ERROR_SECURE_NOT_ENABLED;
-		goto END;
-#endif
-	} else {
-		/* Read Image Header and validate Image Header Table */
-		Status = XFsbl_ReadImageHeader(
-		    &FsblInstancePtr->ImageHeader, &FsblInstancePtr->DeviceOps,
-		    FlashImageOffsetAddress, FsblInstancePtr->ProcessorID,
-		    ImageHeaderTableAddressOffset);
-		if (XFSBL_SUCCESS != Status) {
-			goto END;
-		}
-	}
-END:
-	return Status;
-}
-
-/*****************************************************************************/
-/**
  * This function does ECC Initialization of DDR memory
  *
  * @param none
@@ -969,11 +726,13 @@ END:
  * 		- errors as mentioned in xfsbl_error.h
  *
  *****************************************************************************/
-static u32 XFsbl_DdrEccInit(void) {
+static u32 XFsbl_DdrEccInit(void)
+{
 	u32 Status;
 #if XPAR_PSU_DDRC_0_HAS_ECC
 	u64 LengthBytes =
-	    (XFSBL_PS_DDR_END_ADDRESS - XFSBL_PS_DDR_INIT_START_ADDRESS) + 1;
+		(XFSBL_PS_DDR_END_ADDRESS - XFSBL_PS_DDR_INIT_START_ADDRESS) +
+		1;
 	u64 DestAddr = XFSBL_PS_DDR_INIT_START_ADDRESS;
 
 	XFsbl_Printf(DEBUG_GENERAL, "Initializing DDR ECC\n\r");
@@ -988,7 +747,8 @@ static u32 XFsbl_DdrEccInit(void) {
 	/* If there is upper PS DDR, initialize its ECC */
 #ifdef XFSBL_PS_HI_DDR_START_ADDRESS
 	LengthBytes =
-	    (XFSBL_PS_HI_DDR_END_ADDRESS - XFSBL_PS_HI_DDR_START_ADDRESS) + 1;
+		(XFSBL_PS_HI_DDR_END_ADDRESS - XFSBL_PS_HI_DDR_START_ADDRESS) +
+		1;
 	DestAddr = XFSBL_PS_HI_DDR_START_ADDRESS;
 
 	Status = XFsbl_EccInit(DestAddr, LengthBytes);
@@ -1016,7 +776,8 @@ END:
  *
  *
  *****************************************************************************/
-static void XFsbl_ClearPendingInterrupts(void) {
+static void XFsbl_ClearPendingInterrupts(void)
+{
 	u32 InterruptClearVal = 0xFFFFFFFFU;
 	/* Clear pending peripheral interrupts */
 
@@ -1068,7 +829,8 @@ static void XFsbl_ClearPendingInterrupts(void) {
  *
  *
  *****************************************************************************/
-void XFsbl_MarkDdrAsReserved(u8 Cond) {
+void XFsbl_MarkDdrAsReserved(u8 Cond)
+{
 #if defined(XPAR_PSU_DDR_0_S_AXI_BASEADDR) && !defined(ARMR5)
 	u32 Attrib = ATTRIB_MEMORY_A53_64;
 	u64 BlockNum;
@@ -1085,7 +847,8 @@ void XFsbl_MarkDdrAsReserved(u8 Cond) {
 #ifdef XFSBL_PS_HI_DDR_START_ADDRESS
 	for (BlockNum = 0; BlockNum < NUM_BLOCKS_A53_64_HIGH; BlockNum++) {
 		XFsbl_SetTlbAttributes(XFSBL_PS_HI_DDR_START_ADDRESS +
-					   BlockNum * BLOCK_SIZE_A53_64_HIGH,
+					       BlockNum *
+						       BLOCK_SIZE_A53_64_HIGH,
 				       Attrib);
 	}
 #endif

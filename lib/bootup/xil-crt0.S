@@ -61,7 +61,4 @@ _startup:
 2:	mov	x0, #0
 	mov	x1, #0
 
-//endless_loop:
-//	b endless_loop
-
 	bl	main			/* Jump to main C code */

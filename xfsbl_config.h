@@ -72,7 +72,7 @@ extern "C" {
  *       all data exchanged.
  */
 #ifndef FSBL_PRINT_VAL
-#define FSBL_PRINT_VAL (1U)
+#define FSBL_PRINT_VAL (0U)
 #endif
 
 #ifndef FSBL_DEBUG_VAL
@@ -80,7 +80,7 @@ extern "C" {
 #endif
 
 #ifndef FSBL_DEBUG_INFO_VAL
-#define FSBL_DEBUG_INFO_VAL (0U)
+#define FSBL_DEBUG_INFO_VAL (1U)
 #endif
 
 #ifndef FSBL_DEBUG_DETAILED_VAL
@@ -274,13 +274,13 @@ extern "C" {
 #define FSBL_TPM_EXCLUDE
 #endif
 
-#if (FSBL_PL_LOAD_FROM_OCM_EXCLUDE_VAL == 1U) && \
-    (!defined(FSBL_PL_LOAD_FROM_OCM_EXCLUDE))
+#if (FSBL_PL_LOAD_FROM_OCM_EXCLUDE_VAL == 1U) &&                               \
+	(!defined(FSBL_PL_LOAD_FROM_OCM_EXCLUDE))
 #define FSBL_PL_LOAD_FROM_OCM_EXCLUDE
 #endif
 
-#if (FSBL_UNPROVISIONED_AUTH_SIGN_EXCLUDE_VAL == 1U) && \
-    (!defined(FSBL_UNPROVISIONED_AUTH_SIGN_EXCLUDE))
+#if (FSBL_UNPROVISIONED_AUTH_SIGN_EXCLUDE_VAL == 1U) &&                        \
+	(!defined(FSBL_UNPROVISIONED_AUTH_SIGN_EXCLUDE))
 #define FSBL_UNPROVISIONED_AUTH_SIGN_EXCLUDE
 #endif
 
