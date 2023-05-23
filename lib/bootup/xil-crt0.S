@@ -46,9 +46,9 @@ _startup:
 	mov	x0, #0
 
 // clear bss
-    ldr     x5, =__bss_start
+    ldr     x5, =__bss_start__
 	mov     x9, #0
-    ldr     x9, =__bss_end
+    ldr     x9, =__bss_end__
 	sub 	x6, x9, x5 /* calculate bss size */
 /*    ldr     w6, =__bss_size */
 

@@ -71,19 +71,15 @@ int main(void)
 #if defined(EL3) && (EL3 != 1)
 #error "FSBL should be generated using only EL3 BSP"
 #endif
-
-	xil_printf("================= In Stage 2 "
-		   "============ \n\r");
 	/**
    * Initialize globals.
    */
 	while (FsblStage <= XFSBL_STAGE_DEFAULT) {
 		switch (FsblStage) {
 		case SYSTEM_INIT: {
-			xil_printf("system initialization \n\r");
 			/**
-       * Initialize the system
-       */
+	  	  	   * Initialize the system
+   		    */
 
 			FsblStatus = XFsbl_Initialize(&FsblInstance);
 			if (XFSBL_SUCCESS != FsblStatus) {
@@ -95,9 +91,9 @@ int main(void)
 		} break;
 
 		case SYSTEM_PRIMARY_BOOT_DEVICE_INIT: {
-			XFsbl_Printf(DEBUG_INFO, "================= In Stage 2 "
-						 "============ \n\r");
-
+			XFsbl_Printf(DEBUG_INFO,
+				     "======= Primary boot device init "
+				     "============ \n\r");
 			/**
        * 	Primary Device
        *  Secondary boot device
@@ -105,7 +101,6 @@ int main(void)
        *  image header
        *  partition header
        */
-
 			FsblStatus = XFsbl_BootDeviceInit(&FsblInstance);
 
 			switch (FsblStatus) {
@@ -158,7 +153,7 @@ int main(void)
 
 		case XFSBL_PARTITION_LOAD: {
 			XFsbl_Printf(DEBUG_INFO,
-				     "======= In Stage 3, Partition "
+				     "======= In Stage 3, Partition Load "
 				     "No:%d ======= \n\r",
 				     PartitionNum);
 
@@ -318,56 +313,6 @@ int main(void)
 	XFsbl_HandoffExit(0U, XFSBL_NO_HANDOFFEXIT);
 
 	return 0;
-}
-
-void XFsbl_PrintFsblBanner(void)
-{
-	s32 PlatInfo;
-	/**
-   * Print the FSBL Banner
-   */
-#if !defined(XFSBL_PERF) || defined(FSBL_DEBUG) || defined(FSBL_DEBUG_INFO) || \
-	defined(FSBL_DEBUG_DETAILED)
-	XFsbl_Printf(DEBUG_PRINT_ALWAYS,
-		     "Xilinx Zynq MP First Stage Boot Loader \n\r");
-
-	/*
-	XFsbl_Printf(DEBUG_GENERAL, "MultiBootOffset: 0x%0x\r\n",
-		     XFsbl_In32(CSU_CSU_MULTI_BOOT));
-*/
-
-	if (FsblInstance.ResetReason == XFSBL_PS_ONLY_RESET) {
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "Reset Mode	:	PS Only Reset\r\n");
-	} else if (XFSBL_MASTER_ONLY_RESET == FsblInstance.ResetReason) {
-		XFsbl_Printf(
-			DEBUG_GENERAL,
-			"Reset Mode	:	Master Subsystem Only Reset\r\n");
-	} else if (FsblInstance.ResetReason == XFSBL_SYSTEM_RESET) {
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "Reset Mode	:	System Reset\r\n");
-	} else {
-		/*MISRAC compliance*/
-	}
-#endif
-
-	/**
-   * Print the platform
-   */
-
-	PlatInfo = (s32)XGet_Zynq_UltraMp_Platform_info();
-	if (PlatInfo == XPLAT_ZYNQ_ULTRA_MPQEMU) {
-		XFsbl_Printf(DEBUG_GENERAL, "Platform: QEMU, ");
-	} else if (PlatInfo == XPLAT_ZYNQ_ULTRA_MP) {
-		XFsbl_Printf(DEBUG_GENERAL, "Platform: REMUS, ");
-	} else if (PlatInfo == XPLAT_ZYNQ_ULTRA_MP_SILICON) {
-		XFsbl_Printf(DEBUG_GENERAL, "Platform: Silicon (%d.0), ",
-			     XGetPSVersion_Info() + 1U);
-	} else {
-		XFsbl_Printf(DEBUG_GENERAL, "Platform Not identified \r\n");
-	}
-
-	return;
 }
 
 /*****************************************************************************/

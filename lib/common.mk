@@ -6,6 +6,9 @@ DRIVER_LIB_VERSION = v1.0
 
 library ?= libxil.a
 
+CC = $(CROSS_COMPILE)gcc $(KCFLAGS)
+AR = $(CROSS_COMPILE)ar
+
 LOCAL_DIR ?= $(CURDIR)
 
 INCLUDEDIR = $(LOCAL_DIR)

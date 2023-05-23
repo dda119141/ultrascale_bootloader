@@ -88,6 +88,7 @@
 
 .global __el3_stack
 .global _vector_table
+.global invalidate_dcaches
 
 .set EL3_stack,		__el3_stack
 
@@ -143,12 +144,13 @@ _boot:
 	mov      x30, #0
 
 OKToRun:
-
 	mrs	x0, currentEL
 	cmp	x0, #0xC
 	beq	InitEL3
 
 	b 	error			// go to error if current exception level is neither EL3 nor EL1
+
+error: 	b	error
 
 InitEL3:
 	/*Set vector table base address*/
@@ -200,56 +202,40 @@ InitEL3:
 	orr      w1, w1, #(1 << 2)   	//; Set FIQ bit (FIQs routed to EL3)
 	orr      w1, w1, #(1 << 1)   	//; Set IRQ bit (IRQs routed to EL3)
 	msr      SCR_EL3, x1
+	
+	/*configure cpu auxiliary control register EL1 */
+	ldr	x0,=0x80CA000 		// L1 Data prefetch control - 5, Enable device split throttle, 2 independent data prefetch streams
+#if CONFIG_ARM_ERRATA_855873
+        /*
+	 *  Set ENDCCASCI bit in CPUACTLR_EL1 register, to execute data
+	 *  cache clean operations as data cache clean and invalidate
+	 *
+	 */
+        orr     x0, x0, #(1 << 44)      //; Set ENDCCASCI bit
+#endif
+	msr	S3_1_C15_C2_0, x0 	//CPUACTLR_EL1
 
+	/* program the counter frequency */
+	ldr	x0,=counterfreq
+	msr	CNTFRQ_EL0, x0
+
+	/*Enable hardware coherency between cores*/
+	mrs      x0, S3_1_c15_c2_1  	//Read EL1 CPU Extended Control Register
+	orr      x0, x0, #(1 << 6)  	//Set the SMPEN bit
+	msr      S3_1_c15_c2_1, x0  	//Write EL1 CPU Extended Control Register
+	isb
+
+	tlbi 	ALLE3
+	ic      IALLU                  	//; Invalidate I cache to PoU
+	bl 	invalidate_dcaches
+	dsb	 sy
+	isb
 
 	b 	 _startup		//jump to start
 
 
 #ifdef NOT_USED
 
-/* this initializes the various processor modes */
-
-_prestart:
-_boot:
-	mov      x0, #0
-	mov      x1, #0
-	mov      x2, #0
-	mov      x3, #0
-	mov      x4, #0
-	mov      x5, #0
-	mov      x6, #0
-	mov      x7, #0
-	mov      x8, #0
-	mov      x9, #0
-	mov      x10, #0
-	mov      x11, #0
-	mov      x12, #0
-	mov      x13, #0
-	mov      x14, #0
-	mov      x15, #0
-	mov      x16, #0
-	mov      x17, #0
-	mov      x18, #0
-	mov      x19, #0
-	mov      x20, #0
-	mov      x21, #0
-	mov      x22, #0
-	mov      x23, #0
-	mov      x24, #0
-	mov      x25, #0
-	mov      x26, #0
-	mov      x27, #0
-	mov      x28, #0
-	mov      x29, #0
-	mov      x30, #0
-
-OKToRun:
-
-	mrs	x0, currentEL
-	cmp	x0, #0xC
-	beq	InitEL3
-
-	b 	error			// go to error if current exception level is neither EL3 nor EL1
 
 InitEL3:
 .if (EL3 == 1)

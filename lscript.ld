@@ -46,11 +46,11 @@ SECTIONS
 
 .bss (NOLOAD) : {
    . = ALIGN(64);
-   __bss_start = .;
+   __bss_start__ = .;
    *(.bss)
    *(.bss.*)
    . = ALIGN(64);
-   __bss_end = .;
+   __bss_end__ = .;
 /*   __bss_size = __bss_end - __bss_start; */
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
@@ -66,6 +66,14 @@ SECTIONS
    . = ALIGN(512);
    *(.handoff_params)
 } > psu_ocm_ram_1_S_AXI_BASEADDR
+
+.heap : {
+   _heap_start = .;
+   . += 0x0;
+   _heap_end = .;
+   . = ALIGN(4);
+} > psu_ocm_ram_1_S_AXI_BASEADDR
+
 
 /*
 .bitstream_buffer (NOLOAD) : {
