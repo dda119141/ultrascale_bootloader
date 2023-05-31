@@ -109,23 +109,23 @@ static u8 XFsbl_GetPcrIndex(const XFsblPs *FsblInstancePtr, u32 PartitionNum);
 
 /************************** Variable Definitions *****************************/
 #ifdef ARMR5
-u8 R5LovecBuffer[32] = {0U};
-u8 R5HivecBuffer[32] = {0U};
+u8 R5LovecBuffer[32] = { 0U };
+u8 R5HivecBuffer[32] = { 0U };
 u32 TcmSkipLength = 0U;
 PTRSIZE TcmSkipAddress = 0U;
 u8 IsR5IvtBackup = FALSE;
 #endif
 
 #ifdef XFSBL_SECURE
-u32 Iv[XIH_BH_IV_LENGTH / 4U] = {0};
-u8 AuthBuffer[XFSBL_AUTH_BUFFER_SIZE] __attribute__((aligned(4))) = {0};
+u32 Iv[XIH_BH_IV_LENGTH / 4U] = { 0 };
+u8 AuthBuffer[XFSBL_AUTH_BUFFER_SIZE] __attribute__((aligned(4))) = { 0 };
 #ifdef XFSBL_BS
 #ifdef __clang__
 u8 HashsOfChunks[HASH_BUFFER_SIZE]
-    __attribute__((section(".bss.bitstream_buffer")));
+	__attribute__((section(".bss.bitstream_buffer")));
 #else
 u8 HashsOfChunks[HASH_BUFFER_SIZE]
-    __attribute__((section(".bitstream_buffer")));
+	__attribute__((section(".bitstream_buffer")));
 #endif
 #endif
 #endif
@@ -146,7 +146,8 @@ extern u8 ReadBuffer[READ_BUFFER_SIZE];
  * 			returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-u32 XFsbl_PartitionLoad(XFsblPs *FsblInstancePtr, u32 PartitionNum) {
+u32 XFsbl_PartitionLoad(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u32 Status;
 #ifdef ARMR5
 	u32 Index;
@@ -221,21 +222,16 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *****************************************************************************/
 static u32 XFsbl_PartitionHeaderValidation(XFsblPs *FsblInstancePtr,
-					   u32 PartitionNum) {
+					   u32 PartitionNum)
+{
 	u32 Status;
 	XFsblPs_PartitionHeader *PartitionHeader;
 
-	/**
-	 * Assign the partition header to local variable
-	 */
 	PartitionHeader =
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
 
-	/**
-	 * Check the check sum of the partition header
-	 */
 	Status =
-	    XFsbl_ValidateChecksum((u32 *)PartitionHeader, XIH_PH_LEN / 4U);
+		XFsbl_ValidateChecksum((u32 *)PartitionHeader, XIH_PH_LEN / 4U);
 	if (XFSBL_SUCCESS != Status) {
 		Status = XFSBL_ERROR_PH_CHECKSUM_FAILED;
 		XFsbl_Printf(DEBUG_GENERAL,
@@ -243,11 +239,8 @@ static u32 XFsbl_PartitionHeaderValidation(XFsblPs *FsblInstancePtr,
 		goto END;
 	}
 
-	/**
-	 * Check if partition belongs to FSBL
-	 */
-	if (XFsbl_GetPartitionOwner(PartitionHeader) !=
-	    XIH_PH_ATTRB_PART_OWNER_FSBL) {
+	Status = XFsbl_GetPartitionOwner(PartitionHeader);
+	if (Status != XIH_PH_ATTRB_PART_OWNER_FSBL) {
 		/**
 		 * If the partition doesn't belong to FSBL, skip the partition
 		 */
@@ -257,15 +250,9 @@ static u32 XFsbl_PartitionHeaderValidation(XFsblPs *FsblInstancePtr,
 		goto END;
 	}
 
-	/**
-	 * Validate the fields of partition
-	 */
 	Status = XFsbl_ValidatePartitionHeader(PartitionHeader,
 					       FsblInstancePtr->ProcessorID,
 					       FsblInstancePtr->ResetReason);
-	if (XFSBL_SUCCESS != Status) {
-		goto END;
-	}
 
 END:
 	return Status;
@@ -288,7 +275,8 @@ END:
  *
  *****************************************************************************/
 static u32 XFsbl_CheckHandoffCpu(const XFsblPs *FsblInstancePtr,
-				 u32 DestinationCpu) {
+				 u32 DestinationCpu)
+{
 	u32 ValidHandoffCpuNo;
 	u32 Status;
 	u32 Index;
@@ -326,7 +314,8 @@ END:
  *
  * @return	none
  *****************************************************************************/
-u32 XFsbl_PowerUpMemory(u32 MemoryType) {
+u32 XFsbl_PowerUpMemory(u32 MemoryType)
+{
 	u32 RegValue;
 	u32 Status;
 	u32 PwrStateMask;
@@ -338,22 +327,21 @@ u32 XFsbl_PowerUpMemory(u32 MemoryType) {
 	 * Release the reset of the memory if present
 	 */
 	switch (MemoryType) {
-		case XFSBL_R5_0_TCM: {
-			PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_0_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM0A_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM0B_MASK);
+	case XFSBL_R5_0_TCM: {
+		PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_0_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM0A_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM0B_MASK);
 
-			Status = XFsbl_PowerUpIsland(PwrStateMask);
+		Status = XFsbl_PowerUpIsland(PwrStateMask);
 
-			if (Status != XFSBL_SUCCESS) {
-				Status = XFSBL_ERROR_R5_0_TCM_POWER_UP;
-				XFsbl_Printf(
-				    DEBUG_GENERAL,
-				    "XFSBL_ERROR_R5_0_TCM_POWER_UP\r\n");
-				goto END;
-			}
+		if (Status != XFSBL_SUCCESS) {
+			Status = XFSBL_ERROR_R5_0_TCM_POWER_UP;
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "XFSBL_ERROR_R5_0_TCM_POWER_UP\r\n");
+			goto END;
+		}
 
-			/**
+		/**
 			 * To access TCM,
 			 * 	Release reset to R5 and enable the clk
 			 * 	R5 is under halt state
@@ -363,165 +351,163 @@ u32 XFsbl_PowerUpMemory(u32 MemoryType) {
 			 * state
 			 */
 
-			/**
+		/**
 			 * Place R5, TCM in split mode
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-			RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
-			RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
-			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
-			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+		RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
+		RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
+		RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
+		XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-			/**
+		/**
 			 * Place R5-0 in HALT state
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-			RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
-			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+		RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
+		XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
 
-			/**
+		/**
 			 *  Enable the clock
 			 */
-			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-			RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
-			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+		RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+		RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
+		XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-			/**
+		/**
 			 * Provide some delay,
 			 * so that clock propagates properly.
 			 */
-			(void)usleep(0x50U);
+		(void)usleep(0x50U);
 
-			/**
+		/**
 			 * Release reset to R5-0
 			 */
-			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
-		} break;
+		RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+		XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+	} break;
 
-		case XFSBL_R5_1_TCM: {
-			PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_1_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM1A_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM1B_MASK);
+	case XFSBL_R5_1_TCM: {
+		PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_1_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM1A_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM1B_MASK);
 
-			Status = XFsbl_PowerUpIsland(PwrStateMask);
+		Status = XFsbl_PowerUpIsland(PwrStateMask);
 
-			if (Status != XFSBL_SUCCESS) {
-				Status = XFSBL_ERROR_R5_1_TCM_POWER_UP;
-				XFsbl_Printf(
-				    DEBUG_GENERAL,
-				    "XFSBL_ERROR_R5_1_TCM_POWER_UP\r\n");
-				goto END;
-			}
+		if (Status != XFSBL_SUCCESS) {
+			Status = XFSBL_ERROR_R5_1_TCM_POWER_UP;
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "XFSBL_ERROR_R5_1_TCM_POWER_UP\r\n");
+			goto END;
+		}
 
-			/**
+		/**
 			 * Place R5 in split mode
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-			RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
-			RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
-			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
-			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+		RegValue |= RPU_RPU_GLBL_CNTL_SLSPLIT_MASK;
+		RegValue &= ~(RPU_RPU_GLBL_CNTL_TCM_COMB_MASK);
+		RegValue &= ~(RPU_RPU_GLBL_CNTL_SLCLAMP_MASK);
+		XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-			/**
+		/**
 			 * Place R5-1 in HALT state
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-			RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
-			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+		RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
+		XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
 
-			/**
+		/**
 			 *  Enable the clock
 			 */
-			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-			RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
-			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+		RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+		RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
+		XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-			/**
+		/**
 			 * Provide some delay,
 			 * so that clock propagates properly.
 			 */
-			(void)usleep(0x50U);
+		(void)usleep(0x50U);
 
-			/**
+		/**
 			 * Release reset to R5-1
 			 */
-			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
-		} break;
+		RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+		XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+	} break;
 
-		case XFSBL_R5_L_TCM: {
-			PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_0_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM0A_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM0B_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM1A_MASK |
-					PMU_GLOBAL_PWR_STATE_TCM1B_MASK);
+	case XFSBL_R5_L_TCM: {
+		PwrStateMask = (PMU_GLOBAL_PWR_STATE_R5_0_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM0A_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM0B_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM1A_MASK |
+				PMU_GLOBAL_PWR_STATE_TCM1B_MASK);
 
-			Status = XFsbl_PowerUpIsland(PwrStateMask);
+		Status = XFsbl_PowerUpIsland(PwrStateMask);
 
-			if (Status != XFSBL_SUCCESS) {
-				Status = XFSBL_ERROR_R5_L_TCM_POWER_UP;
-				XFsbl_Printf(
-				    DEBUG_GENERAL,
-				    "XFSBL_ERROR_R5_L_TCM_POWER_UP\r\n");
-				goto END;
-			}
+		if (Status != XFSBL_SUCCESS) {
+			Status = XFSBL_ERROR_R5_L_TCM_POWER_UP;
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "XFSBL_ERROR_R5_L_TCM_POWER_UP\r\n");
+			goto END;
+		}
 
-			/**
+		/**
 			 * Place R5 in lock step mode
 			 * Combine TCM's
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
-			RegValue |= RPU_RPU_GLBL_CNTL_SLCLAMP_MASK;
-			RegValue &= ~(RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
-			RegValue |= RPU_RPU_GLBL_CNTL_TCM_COMB_MASK;
-			XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_GLBL_CNTL);
+		RegValue |= RPU_RPU_GLBL_CNTL_SLCLAMP_MASK;
+		RegValue &= ~(RPU_RPU_GLBL_CNTL_SLSPLIT_MASK);
+		RegValue |= RPU_RPU_GLBL_CNTL_TCM_COMB_MASK;
+		XFsbl_Out32(RPU_RPU_GLBL_CNTL, RegValue);
 
-			/**
+		/**
 			 * Place R5-0 in HALT state
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_0_CFG);
-			RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
-			XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_0_CFG);
+		RegValue &= ~(RPU_RPU_0_CFG_NCPUHALT_MASK);
+		XFsbl_Out32(RPU_RPU_0_CFG, RegValue);
 
-			/**
+		/**
 			 * Place R5-1 in HALT state
 			 */
-			RegValue = XFsbl_In32(RPU_RPU_1_CFG);
-			RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
-			XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
+		RegValue = XFsbl_In32(RPU_RPU_1_CFG);
+		RegValue &= ~(RPU_RPU_1_CFG_NCPUHALT_MASK);
+		XFsbl_Out32(RPU_RPU_1_CFG, RegValue);
 
-			/**
+		/**
 			 *  Enable the clock
 			 */
-			RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
-			RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
-			XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
+		RegValue = XFsbl_In32(CRL_APB_CPU_R5_CTRL);
+		RegValue |= CRL_APB_CPU_R5_CTRL_CLKACT_MASK;
+		XFsbl_Out32(CRL_APB_CPU_R5_CTRL, RegValue);
 
-			/**
+		/**
 			 * Provide some delay,
 			 * so that clock propagates properly.
 			 */
-			(void)usleep(0x50U);
+		(void)usleep(0x50U);
 
-			/**
+		/**
 			 * Release reset to R5-0,R5-1
 			 */
-			RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
-			RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
-			XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
-		} break;
+		RegValue = XFsbl_In32(CRL_APB_RST_LPD_TOP);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R50_RESET_MASK);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_R51_RESET_MASK);
+		RegValue &= ~(CRL_APB_RST_LPD_TOP_RPU_AMBA_RESET_MASK);
+		XFsbl_Out32(CRL_APB_RST_LPD_TOP, RegValue);
+	} break;
 
-		default:
-			/* nothing to do */
-			Status = XFSBL_SUCCESS;
-			break;
+	default:
+		/* nothing to do */
+		Status = XFSBL_SUCCESS;
+		break;
 	}
 
 END:
@@ -539,7 +525,8 @@ END:
  * @return	returns the error codes described in xfsbl_error.h on any error
  * 			returns XFSBL_SUCCESS on success
  *****************************************************************************/
-static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum) {
+static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u32 Status;
 	u32 DestinationCpu;
 	u32 CpuNo;
@@ -554,7 +541,7 @@ static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum) {
 	 * Assign the partition header to local variable
 	 */
 	PartitionHeader =
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
 
 	/**
 	 * Check for XIP image
@@ -582,9 +569,9 @@ static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum) {
 			/* Get the execution state */
 			ExecState = XFsbl_GetA53ExecState(PartitionHeader);
 			FsblInstancePtr->HandoffValues[CpuNo].CpuSettings =
-			    DestinationCpu | ExecState;
+				DestinationCpu | ExecState;
 			FsblInstancePtr->HandoffValues[CpuNo].HandoffAddress =
-			    PartitionHeader->DestinationExecutionAddress;
+				PartitionHeader->DestinationExecutionAddress;
 			FsblInstancePtr->HandoffCpuNo += 1U;
 		} else {
 			/**
@@ -601,14 +588,14 @@ static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum) {
 	 * Get the source(flash offset) address where it needs to copy
 	 */
 	SrcAddress =
-	    FsblInstancePtr->ImageOffsetAddress +
-	    ((PartitionHeader->DataWordOffset) * XIH_PARTITION_WORD_LENGTH);
+		FsblInstancePtr->ImageOffsetAddress +
+		((PartitionHeader->DataWordOffset) * XIH_PARTITION_WORD_LENGTH);
 
 	/**
 	 * Length of the partition to be copied
 	 */
-	Length =
-	    (PartitionHeader->TotalDataWordLength) * XIH_PARTITION_WORD_LENGTH;
+	Length = (PartitionHeader->TotalDataWordLength) *
+		 XIH_PARTITION_WORD_LENGTH;
 	DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
 
 	/**
@@ -652,8 +639,8 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr,
-				     u32 PartitionNum) {
+static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u32 Status = XFSBL_SUCCESS;
 	return Status;
 }
@@ -669,23 +656,24 @@ static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr,
  * @return	None
  *
  *****************************************************************************/
-static void XFsbl_CheckPmuFw(const XFsblPs *FsblInstancePtr, u32 PartitionNum) {
+static void XFsbl_CheckPmuFw(const XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u32 DestinationCpu;
 	u32 DestinationCpuNxt;
 	u32 PmuFwLoadDone;
 	u32 RegVal;
 
 	DestinationCpu = XFsbl_GetDestinationCpu(
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
 
 	if (DestinationCpu == XIH_PH_ATTRB_DEST_CPU_PMU) {
 		if ((PartitionNum + 1U) <=
 		    (FsblInstancePtr->ImageHeader.ImageHeaderTable
-			 .NoOfPartitions -
+			     .NoOfPartitions -
 		     1U)) {
 			DestinationCpuNxt = XFsbl_GetDestinationCpu(
-			    &FsblInstancePtr->ImageHeader
-				 .PartitionHeader[PartitionNum + 1U]);
+				&FsblInstancePtr->ImageHeader
+					 .PartitionHeader[PartitionNum + 1U]);
 			if (DestinationCpuNxt != XIH_PH_ATTRB_DEST_CPU_PMU) {
 				/* there is a partition after this but that is
 				 * not PMU FW */
@@ -727,7 +715,8 @@ static void XFsbl_CheckPmuFw(const XFsblPs *FsblInstancePtr, u32 PartitionNum) {
  *
  * @return	None
  *****************************************************************************/
-static void XFsbl_SetBSSecureState(u32 State) {
+static void XFsbl_SetBSSecureState(u32 State)
+{
 	u32 RegVal;
 
 	/* Set Firmware State in PMU GLOBAL GEN STORAGE Register */
@@ -748,7 +737,8 @@ static void XFsbl_SetBSSecureState(u32 State) {
  * @return	None
  *
  *****************************************************************************/
-static void XFsbl_PollForDDRSrExit(void) {
+static void XFsbl_PollForDDRSrExit(void)
+{
 	u32 RegValue;
 	/* Timeout count for around 1 second */
 #ifdef ARMR5
@@ -776,7 +766,8 @@ static void XFsbl_PollForDDRSrExit(void) {
  * @return	None
  *
  *****************************************************************************/
-static void XFsbl_PollForDDRReady(void) {
+static void XFsbl_PollForDDRReady(void)
+{
 	volatile u32 RegValue;
 
 	RegValue = XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL);
@@ -824,7 +815,8 @@ static void XFsbl_PollForDDRReady(void) {
  *
  *****************************************************************************/
 
-static void XFsbl_SetR5ExcepVectorHiVec(void) {
+static void XFsbl_SetR5ExcepVectorHiVec(void)
+{
 	u32 RegVal;
 	RegVal = mfcp(XREG_CP15_SYS_CONTROL);
 	RegVal |= XFSBL_SET_R5_SCTLR_VECTOR_BIT;
@@ -843,7 +835,8 @@ static void XFsbl_SetR5ExcepVectorHiVec(void) {
  *
  *****************************************************************************/
 
-static void XFsbl_SetR5ExcepVectorLoVec(void) {
+static void XFsbl_SetR5ExcepVectorLoVec(void)
+{
 	u32 RegVal;
 	RegVal = mfcp(XREG_CP15_SYS_CONTROL);
 	RegVal &= (~(XFSBL_SET_R5_SCTLR_VECTOR_BIT));
@@ -863,10 +856,11 @@ static void XFsbl_SetR5ExcepVectorLoVec(void) {
  * @return	PcrIndex
  *
  *****************************************************************************/
-static u8 XFsbl_GetPcrIndex(const XFsblPs *FsblInstancePtr, u32 PartitionNum) {
+static u8 XFsbl_GetPcrIndex(const XFsblPs *FsblInstancePtr, u32 PartitionNum)
+{
 	u8 PcrIndex = 0U;
 	const XFsblPs_PartitionHeader *PartitionHeader =
-	    &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
+		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
 	u32 DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
 	u32 PartitionAttributes = PartitionHeader->PartitionAttributes;
 	u32 DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);

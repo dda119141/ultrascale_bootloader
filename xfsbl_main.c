@@ -76,14 +76,17 @@ int main(void)
 	while (FsblStage <= XFSBL_STAGE_DEFAULT) {
 		switch (FsblStage) {
 		case SYSTEM_INIT: {
-			/**
-	  	  	   * Initialize the system
-   		    */
-
+			XFsbl_Printf(DEBUG_INFO, "====enter system init \n ");
 			FsblStatus = XFsbl_Initialize(&FsblInstance);
+
 			if (XFSBL_SUCCESS != FsblStatus) {
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "hardware platform "
+					     "Initialization failed 0x%0lx\n\r",
+					     FsblStatus);
 				FsblStatus += XFSBL_ERROR_STAGE_1;
 				FsblStage = XFSBL_STAGE_ERR;
+
 			} else {
 				FsblStage = SYSTEM_PRIMARY_BOOT_DEVICE_INIT;
 			}
@@ -91,19 +94,19 @@ int main(void)
 
 		case SYSTEM_PRIMARY_BOOT_DEVICE_INIT: {
 			XFsbl_Printf(DEBUG_INFO,
-				     "======= Primary boot device init "
-				     "============ \n\r");
+				     "====enter Primary boot device init "
+				     "=== \n\r");
+
 			/**
-       * 	Primary Device
-       *  Secondary boot device
-       *  DeviceOps
-       *  image header
-       *  partition header
-       */
+       		* 	Primary Device, Secondary boot device
+       		*  DeviceOps, image header,  partition header
+       		*/
 			FsblStatus = XFsbl_BootDeviceInit(&FsblInstance);
 
+			//			FsblStage = XFSBL_STAGE_DEFAULT;
+			//			break;
 			switch (FsblStatus) {
-			case XFSBL_STATUS_JTAG:
+			case XFSBL_STATUS_JTAG: {
 				/*
    			      * Mark RPU cores as usable in JTAG boot
      		    * mode.
@@ -118,10 +121,10 @@ int main(void)
   		       * handoff stage
     		     */
 				FsblStage = XFSBL_HANDOFF;
-				break;
-			case XFSBL_SUCCESS:
+			} break;
+			case XFSBL_SUCCESS: {
 				XFsbl_Printf(DEBUG_INFO,
-					     "Initialization Success \n\r");
+					     "Boot Device Init Success \n\r");
 
 				/**
 		         * Start the partition loading from 1
@@ -137,15 +140,15 @@ int main(void)
 
 				FsblStage = XFSBL_PARTITION_LOAD;
 
-				break;
-			default:
+			} break;
+			default: {
 				XFsbl_Printf(DEBUG_GENERAL,
 					     "Boot Device "
 					     "Initialization failed 0x%0lx\n\r",
 					     FsblStatus);
 				FsblStatus += XFSBL_ERROR_STAGE_2;
 				FsblStage = XFSBL_STAGE_ERR;
-				break;
+			} break;
 			}
 			break;
 		}

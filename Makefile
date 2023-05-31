@@ -23,12 +23,13 @@ OBJS += $(patsubst %.S, %.o, $(assembler_sources))
 OBJS_D := $(patsubst %.c, %.d, $(source_files))
 OBJS_SD := $(patsubst %.S, %.d, $(assembler_sources))
 
-CFLAGS = -c -MMD -MP -Wall -fmessage-length=0 
+CFLAGS = -c -g -MMD -MP -Wall -Werror -fmessage-length=0 
 
 sub_component := lib
 sub_component += lib/uartps
 sub_component += lib/bootup
 sub_component += lib/xiicps
+sub_component += lib/qspipsu 
 #sub_component += lib/xilffs
 #sub_component += lib/sdps 
 #sub_component += lib/xilpm/common
@@ -43,7 +44,7 @@ INCLUDEPATH += $(addprefix -I,$(sub_component))
 DUMP    :=      $(CROSS_COMPILE)objdump -xSD
 ECFLAGS = -DARMA53_$(A53_STATE) -Os -flto -ffat-lto-objects
 LDFLAGS := -DARMA53_$(A53_STATE) -MMD -MP -Wall -fmessage-length=0 -Os -flto -ffat-lto-objects
-LDFLAGS += -Wl,--start-group,-luartps,-lxiicps,-lxil,-lgcc,-lc,--end-group
+LDFLAGS += -Wl,--start-group,-luartps,-lqspipsu,-lxiicps,-lxil,-lgcc,-lc,--end-group
 LDFLAGS += $(addprefix -L,$(sub_component))
 
 

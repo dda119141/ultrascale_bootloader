@@ -67,6 +67,7 @@
 #include "xfsbl_misc_drivers.h"
 #include "xil_cache.h"
 #include "xil_mmu.h"
+#include "xfsbl_qspi.h"
 
 /************************** Constant Definitions *****************************/
 #define PART_NAME_LEN_MAX 20U
@@ -82,6 +83,11 @@ static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_ResetValidation(void);
 static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr);
+static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr);
+static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr);
+#ifdef XFSBL_SECURE
+static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr);
+#endif
 static u32 XFsbl_DdrEccInit(void);
 static void XFsbl_EnableProgToPL(void);
 static void XFsbl_ClearPendingInterrupts(void);
@@ -100,7 +106,7 @@ void XFsbl_RegisterHandlers(void);
 /************************** Variable Definitions *****************************/
 extern XFsblPs FsblInstance;
 
-u8 ReadBuffer[100];
+u8 ReadBuffer[XIH_BH_MAX_SIZE];
 
 #ifdef XFSBL_SECURE
 u8 *ImageHdr = ReadBuffer;
@@ -308,6 +314,27 @@ u32 XFsbl_BootDeviceInit(XFsblPs *FsblInstancePtr)
 	 * Configure the primary boot device
 	 */
 	Status = XFsbl_PrimaryBootDeviceInit(FsblInstancePtr);
+	XFsbl_Printf(DEBUG_GENERAL, "Primary device status 0x%0lx\n\r", Status);
+	if (XFSBL_SUCCESS != Status) {
+		goto END;
+	}
+
+	/**
+      * Retrieve Boot header
+      */
+	Status = retrieveBootHeader(FsblInstancePtr);
+	XFsbl_Printf(DEBUG_GENERAL, "retrieve header status 0x%0lx\n\r",
+		     Status);
+	if (XFSBL_SUCCESS != Status) {
+		goto END;
+	}
+
+	/**
+      * Retrieve Image header table
+      */
+	Status = retrieveImageHeaderTable(FsblInstancePtr);
+	XFsbl_Printf(DEBUG_GENERAL, "Image header table status 0x%0lx\n\r",
+		     Status);
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
@@ -619,22 +646,20 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
 
 	case XFSBL_QSPI24_BOOT_MODE: {
 		XFsbl_Printf(DEBUG_GENERAL, "QSPI 24bit Boot Mode \n\r");
-		/**
-			 * This bootmode is not supported in this release
-			 */
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+
+		FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_Qspi24Init;
+		FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_Qspi24Copy;
+		FsblInstancePtr->DeviceOps.DeviceRelease = XFsbl_Qspi24Release;
+		Status = XFSBL_SUCCESS;
 	} break;
 
 	case XFSBL_QSPI32_BOOT_MODE: {
 		XFsbl_Printf(DEBUG_GENERAL, "QSPI 32 bit Boot Mode \n\r");
-		/**
-			 * This bootmode is not supported in this release
-			 */
-		XFsbl_Printf(DEBUG_GENERAL,
-			     "XFSBL_ERROR_UNSUPPORTED_BOOT_MODE\n\r");
-		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
+
+		FsblInstancePtr->DeviceOps.DeviceInit = XFsbl_Qspi32Init;
+		FsblInstancePtr->DeviceOps.DeviceCopy = XFsbl_Qspi32Copy;
+		FsblInstancePtr->DeviceOps.DeviceRelease = XFsbl_Qspi32Release;
+		Status = XFSBL_SUCCESS;
 	} break;
 
 	case XFSBL_SD0_BOOT_MODE:
@@ -713,6 +738,227 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
 END:
 	return Status;
 }
+
+static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr)
+{
+	u32 FlashImageOffsetAddress;
+	u32 Status;
+	u32 MultiBootOffset;
+
+	/**
+	 * Read the Multiboot Register
+	 */
+	MultiBootOffset = XFsbl_In32(CSU_CSU_MULTI_BOOT);
+	/*	XFsbl_Printf(DEBUG_INFO, "Multiboot Reg : 0x%0lx \n\r",
+		     MultiBootOffset);
+*/
+
+	xil_printf("*** aaa *** \n\r");
+	/**
+	 *  Calculate the Flash Offset Address
+	 *  For file system based devices, Flash Offset Address should be 0 always
+	 */
+	if ((FsblInstancePtr->SecondaryBootDevice == 0U) &&
+	    (!((FsblInstancePtr->PrimaryBootDevice == XFSBL_SD0_BOOT_MODE) ||
+	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_EMMC_BOOT_MODE) ||
+	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_SD1_BOOT_MODE) ||
+	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_SD1_LS_BOOT_MODE) ||
+	       (FsblInstancePtr->PrimaryBootDevice == XFSBL_USB_BOOT_MODE)))) {
+		FsblInstancePtr->ImageOffsetAddress =
+			MultiBootOffset * XFSBL_IMAGE_SEARCH_OFFSET;
+	} else {
+		FsblInstancePtr->ImageOffsetAddress = 0U;
+	}
+
+	FsblInstancePtr->ImageOffsetAddress = 0U;
+	FlashImageOffsetAddress = FsblInstancePtr->ImageOffsetAddress;
+
+	xil_printf("*** before copy *** \n\r");
+	/* Copy boot header to internal memory */
+	Status = FsblInstancePtr->DeviceOps.DeviceCopy(
+		FlashImageOffsetAddress, (PTRSIZE)ReadBuffer, XIH_BH_MAX_SIZE);
+	if (XFSBL_SUCCESS != Status) {
+		XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
+		goto END;
+	}
+
+	xil_printf("*** after copy *** \n\r");
+	/**
+	 * Read Boot Image attributes
+	 */
+	FsblInstancePtr->BootHdrAttributes =
+		Xil_In32((UINTPTR)ReadBuffer + XIH_BH_IMAGE_ATTRB_OFFSET);
+
+END:
+	return Status;
+}
+
+static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr)
+{
+	u32 Status;
+	u32 ImageHeaderTableAddressOffset = 0U;
+
+	ImageHeaderTableAddressOffset =
+		Xil_In32((UINTPTR)ReadBuffer + XIH_BH_IH_TABLE_OFFSET);
+
+	XFsbl_Printf(DEBUG_INFO, "Image Header Table Offset 0x%0lx \n\r",
+		     ImageHeaderTableAddressOffset);
+
+	/* Read Image Header Table */
+	Status = XFsbl_ReadImageHeader(&FsblInstancePtr->ImageHeader,
+				       &FsblInstancePtr->DeviceOps,
+				       FsblInstancePtr->ImageOffsetAddress,
+				       FsblInstancePtr->ProcessorID,
+				       ImageHeaderTableAddressOffset);
+	if (XFSBL_SUCCESS != Status) {
+		goto END;
+	}
+
+END:
+	return Status;
+}
+
+#ifdef XFSBL_SECURE
+/*****************************************************************************/
+/**
+ * This function validates the image header
+ *
+ * @param	FsblInstancePtr is pointer to the XFsbl Instance
+ *
+ * @return	returns the error codes described in xfsbl_error.h on any error
+ * 			returns XFSBL_SUCCESS on success
+ *
+ ******************************************************************************/
+static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr)
+{
+	u32 Status = 0U;
+	u32 BootHdrAttrb = 0U;
+	u32 EfuseCtrl;
+	u32 Size;
+	u32 AcOffset = 0U;
+
+	BootHdrAttrb =
+		Xil_In32((UINTPTR)ReadBuffer + XIH_BH_IMAGE_ATTRB_OFFSET);
+
+	/**
+	 * Read Efuse bit and check Boot Header for Authentication
+	 */
+	EfuseCtrl = XFsbl_In32(EFUSE_SEC_CTRL);
+
+	if (((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0x00) &&
+	    ((BootHdrAttrb & XIH_BH_IMAGE_ATTRB_RSA_MASK) ==
+	     XIH_BH_IMAGE_ATTRB_RSA_MASK)) {
+		Status = XFSBL_ERROR_BH_AUTH_IS_NOTALLOWED;
+		XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_BH_AUTH_IS_NOTALLOWED"
+					    " when eFSUE RSA bit is set \n\r");
+		goto END;
+	}
+
+	/* If authentication is enabled */
+	if (((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0U) ||
+	    ((BootHdrAttrb & XIH_BH_IMAGE_ATTRB_RSA_MASK) ==
+	     XIH_BH_IMAGE_ATTRB_RSA_MASK)) {
+		FsblInstancePtr->AuthEnabled = TRUE;
+		XFsbl_Printf(DEBUG_INFO, "Authentication Enabled\r\n");
+
+		/* Read AC offset from Image header table */
+		Status = FsblInstancePtr->DeviceOps.DeviceCopy(
+			FlashImageOffsetAddress +
+				ImageHeaderTableAddressOffset +
+				XIH_IHT_AC_OFFSET,
+			(PTRSIZE)&AcOffset, XIH_FIELD_LEN);
+		if (XFSBL_SUCCESS != Status) {
+			XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
+			goto END;
+		}
+		if (AcOffset != 0x00U) {
+			/* Authentication exists copy AC to OCM */
+			Status = FsblInstancePtr->DeviceOps.DeviceCopy(
+				(FsblInstancePtr->ImageOffsetAddress +
+				 (AcOffset * XIH_PARTITION_WORD_LENGTH)),
+				(INTPTR)AuthBuffer, XFSBL_AUTH_CERT_MIN_SIZE);
+			if (XFSBL_SUCCESS != Status) {
+				goto END;
+			}
+
+			/* Authenticate boot header */
+			/* When eFUSE RSA enable bit is blown */
+			if ((EfuseCtrl & EFUSE_SEC_CTRL_RSA_EN_MASK) != 0U) {
+				Status = XFsbl_BhAuthentication(
+					FsblInstancePtr, ReadBuffer,
+					(PTRSIZE)AuthBuffer, TRUE);
+			}
+			/* When eFUSE RSA bit is not blown */
+			else {
+				Status = XFsbl_BhAuthentication(
+					FsblInstancePtr, ReadBuffer,
+					(PTRSIZE)AuthBuffer, FALSE);
+			}
+			if (Status != XST_SUCCESS) {
+				XFsbl_Printf(
+					DEBUG_GENERAL,
+					"Failure at boot header authentication\r\n");
+				goto END;
+			}
+
+			/* Authenticate Image header table */
+			/*
+			 * Total size of Image header may vary
+			 * depending on padding so
+			 * size = AC address - Start address;
+			 */
+			Size = (AcOffset * XIH_PARTITION_WORD_LENGTH) -
+			       (ImageHeaderTableAddressOffset);
+			if (Size > sizeof(ReadBuffer)) {
+				Status = XFSBL_ERROR_IMAGE_HEADER_SIZE;
+				goto END;
+			}
+
+			/* Copy the Image header to OCM */
+			Status = FsblInstancePtr->DeviceOps.DeviceCopy(
+				FsblInstancePtr->ImageOffsetAddress +
+					ImageHeaderTableAddressOffset,
+				(INTPTR)ImageHdr, Size);
+			if (Status != XFSBL_SUCCESS) {
+				goto END;
+			}
+
+			/* Authenticate the image header */
+			Status = XFsbl_Authentication(
+				FsblInstancePtr, (PTRSIZE)ImageHdr,
+				Size + XFSBL_AUTH_CERT_MIN_SIZE,
+				(PTRSIZE)(AuthBuffer), 0x00U);
+			if (Status != XFSBL_SUCCESS) {
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "Failure at image header"
+					     " table authentication\r\n");
+				goto END;
+			}
+			/*
+			 * As authentication is success
+			 * verify ACoffset used for authentication
+			 */
+			if (AcOffset !=
+			    Xil_In32((UINTPTR)ImageHdr + XIH_IHT_AC_OFFSET)) {
+				Status = XFSBL_ERROR_IMAGE_HEADER_ACOFFSET;
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "Wrong Authentication "
+					     "certificate offset\r\n");
+				goto END;
+			}
+		} else {
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "XFSBL_ERROR_IMAGE_HEADER_ACOFFSET\r\n");
+			Status = XFSBL_ERROR_IMAGE_HEADER_ACOFFSET;
+			goto END;
+		}
+	} else {
+	}
+
+END:
+	return Status;
+}
+#endif
 
 /*****************************************************************************/
 /**
