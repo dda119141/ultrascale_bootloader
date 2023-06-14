@@ -106,7 +106,7 @@ void XFsbl_RegisterHandlers(void);
 /************************** Variable Definitions *****************************/
 extern XFsblPs FsblInstance;
 
-u8 ReadBuffer[XIH_BH_MAX_SIZE];
+u8 ReadBuffer[XFSBL_SIZE_IMAGE_HDR] = { 0 };
 
 #ifdef XFSBL_SECURE
 u8 *ImageHdr = ReadBuffer;
@@ -749,11 +749,11 @@ static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr)
 	 * Read the Multiboot Register
 	 */
 	MultiBootOffset = XFsbl_In32(CSU_CSU_MULTI_BOOT);
-	/*	XFsbl_Printf(DEBUG_INFO, "Multiboot Reg : 0x%0lx \n\r",
+	/*	
+		XFsbl_Printf(DEBUG_INFO, "Multiboot Reg : 0x%0lx \n\r",
 		     MultiBootOffset);
-*/
+	*/
 
-	xil_printf("*** aaa *** \n\r");
 	/**
 	 *  Calculate the Flash Offset Address
 	 *  For file system based devices, Flash Offset Address should be 0 always
@@ -773,7 +773,6 @@ static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr)
 	FsblInstancePtr->ImageOffsetAddress = 0U;
 	FlashImageOffsetAddress = FsblInstancePtr->ImageOffsetAddress;
 
-	xil_printf("*** before copy *** \n\r");
 	/* Copy boot header to internal memory */
 	Status = FsblInstancePtr->DeviceOps.DeviceCopy(
 		FlashImageOffsetAddress, (PTRSIZE)ReadBuffer, XIH_BH_MAX_SIZE);
@@ -782,7 +781,7 @@ static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr)
 		goto END;
 	}
 
-	xil_printf("*** after copy *** \n\r");
+	xil_printf("*** Boot header copy successful *** \n\r");
 	/**
 	 * Read Boot Image attributes
 	 */
@@ -804,6 +803,13 @@ static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr)
 	XFsbl_Printf(DEBUG_INFO, "Image Header Table Offset 0x%0lx \n\r",
 		     ImageHeaderTableAddressOffset);
 
+	XFsbl_Printf(DEBUG_INFO,
+		     "Image Header Table raw 0x%0x 0x%0x 0x%0x 0x%0x \n\r",
+		     ReadBuffer[XIH_BH_IH_TABLE_OFFSET],
+		     ReadBuffer[XIH_BH_IH_TABLE_OFFSET + 1],
+		     ReadBuffer[XIH_BH_IH_TABLE_OFFSET + 2],
+		     ReadBuffer[XIH_BH_IH_TABLE_OFFSET + 3]);
+
 	/* Read Image Header Table */
 	Status = XFsbl_ReadImageHeader(&FsblInstancePtr->ImageHeader,
 				       &FsblInstancePtr->DeviceOps,
@@ -813,6 +819,8 @@ static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr)
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
+
+	xil_printf("*** reTrieveIHT Status %d *** \n\r", Status);
 
 END:
 	return Status;
