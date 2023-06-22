@@ -12,32 +12,35 @@ AR = $(CROSS_COMPILE)ar
 LOCAL_DIR ?= $(CURDIR)
 
 INCLUDEDIR = $(LOCAL_DIR)
-INCLUDEDIR += $(LOCAL_DIR)/../include
+INCLUDEDIR += $(LOCAL_DIR)/../common
 INCLUDEDIR += $(LOCAL_DIR)/../../
 
 INCLUDEPATH += $(addprefix -I ,$(INCLUDEDIR))
 
+OUTPUT = $(BUILD_OUTPUT)/lib/$(DIR_NAME)
+OUTLIB = $(OUTPUT)/$(library)
+
 assembler_sources = $(wildcard *.S)
 sources = $(wildcard *.c)
 
-objects = $(patsubst %.c, %.o, $(sources))
-assembler_objects = $(patsubst %.S, %.o, $(assembler_sources))
+objects = $(patsubst %.c, $(OUTPUT)/%.o, $(sources))
+assembler_objects = $(patsubst %.S, $(OUTPUT)/%.o, $(assembler_sources))
 all_objects = $(objects)
 all_objects += $(assembler_objects)
 
 EXTRA_ARCHIVE_FLAGS=rc
 
 .PHONY: library
-library: $(library)
+library: $(OUTLIB)
 
-$(library): $(all_objects)
+$(OUTLIB): $(all_objects) 
 	$(AR) $(EXTRA_ARCHIVE_FLAGS) $@ $^
 
-%.o:%.c
+$(all_objects): $(assembler_sources) $(sources) | $(OUTPUT)
 	$(CC) $(INCLUDEPATH) -c $< -o $@
 
-%.o:%.S
-	$(CC) $(INCLUDEPATH) -c $< -o $@
+$(OUTPUT):
+	[ -d $@ ] || mkdir -p $@;
 
 PHONY += clean
 clean:

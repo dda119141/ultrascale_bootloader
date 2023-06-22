@@ -6,4 +6,7 @@ DRIVER_LIB_VERSION = v1.0
 
 library=libuartps.a
 
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+DIR_NAME := $(notdir $(patsubst %/,%,$(dir $(mkfile_path))))
+
 include ../common.mk
