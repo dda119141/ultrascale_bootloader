@@ -38,7 +38,7 @@ EXEC := fsbl_a53_zc102.elf
 
 INCLUDEPATH += -I$(CURDIR) 
 INCLUDEPATH += -I$(CURDIR)/generated 
-INCLUDEPATH += -I$(CURDIR)/lib/include 
+INCLUDEPATH += -I$(CURDIR)/lib/common 
 INCLUDEPATH += $(addprefix -I,$(sub_component))
 
 DUMP    :=      $(CROSS_COMPILE)objdump -xSD
