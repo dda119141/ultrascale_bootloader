@@ -11,6 +11,10 @@ target_sources(qspipsu PUBLIC
 	xqspipsu_sinit.c)
 
 
+set_target_properties(qspipsu PROPERTIES
+ LINK_FLAGS "rc"
+ ) 
+
 target_include_directories(qspipsu PRIVATE 
 	"../uartps"
 	"../common")

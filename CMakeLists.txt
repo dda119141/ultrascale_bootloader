@@ -23,13 +23,13 @@ add_executable(fsboot_a53
 	generated/psu_init.c
 	)
 
-add_compile_options(-fprofile-arcs -ftest-coverage)
+#add_compile_options(-fprofile-arcs -ftest-coverage)
 #			-flto -ffat-lto-objects
 
 target_compile_options(fsboot_a53 PRIVATE
 			-DARMA53_64
-		 	-Wall -Werror -g -ftest-coverage -fprofile-arcs
-			#-flto -ffat-lto-objects
+		 	-Wall -Werror -g 
+			-flto -ffat-lto-objects
 			 )
 
 target_include_directories(fsboot_a53 PRIVATE 

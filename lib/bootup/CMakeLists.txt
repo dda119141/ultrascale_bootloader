@@ -32,8 +32,14 @@ target_sources(xil PUBLIC
 	_open.c
 	_sbrk.c
 	outbyte.c
+	inbyte.c
 	write.c
 	)
+
+set_target_properties(xil PROPERTIES
+ LINK_FLAGS "rc"
+ ) 
+
 
 target_include_directories(xil PRIVATE 
 	"../uartps"

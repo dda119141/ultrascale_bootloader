@@ -20,8 +20,11 @@ INCLUDEPATH += $(addprefix -I ,$(INCLUDEDIR))
 OUTPUT = $(BUILD_OUTPUT)/lib/$(DIR_NAME)
 OUTLIB = $(OUTPUT)/$(library)
 
-assembler_sources = $(wildcard *.S)
-sources = $(wildcard *.c)
+assembler_sources := $(wildcard *.S)
+sources := $(wildcard *.c)
+
+vpath %.c $(OUTPUT)
+vpath %.s $(OUTPUT)
 
 objects = $(patsubst %.c, $(OUTPUT)/%.o, $(sources))
 assembler_objects = $(patsubst %.S, $(OUTPUT)/%.o, $(assembler_sources))
@@ -36,7 +39,8 @@ library: $(OUTLIB)
 $(OUTLIB): $(all_objects) 
 	$(AR) $(EXTRA_ARCHIVE_FLAGS) $@ $^
 
-$(all_objects): $(assembler_sources) $(sources) | $(OUTPUT)
+#$(all_objects): $(assembler_sources) $(sources) | $(OUTPUT)
+$(all_objects): %.S $(sources) | $(OUTPUT)
 	$(CC) $(INCLUDEPATH) -c $< -o $@
 
 $(OUTPUT):

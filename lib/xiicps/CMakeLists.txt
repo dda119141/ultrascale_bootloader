@@ -13,6 +13,10 @@ target_sources(iicps PUBLIC
 	xiicps_options.c
 	xiicps_sinit.c)
 
+set_target_properties(iicps PROPERTIES
+ LINK_FLAGS "rc"
+ ) 
+
 target_include_directories(iicps PRIVATE 
 	"../uartps"
 	"../common")
