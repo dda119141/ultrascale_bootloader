@@ -20,14 +20,13 @@ INCLUDEPATH += $(addprefix -I ,$(INCLUDEDIR))
 OUTPUT = $(BUILD_OUTPUT)/lib/$(DIR_NAME)
 OUTLIB = $(OUTPUT)/$(library)
 
-assembler_sources := $(wildcard *.S)
-sources := $(wildcard *.c)
+assembler_sources_rel := $(wildcard *.S)
+assembler_sources = $(patsubst %.S, $(LOCAL_DIR)/%.S, $(assembler_sources_rel))
+sources_rel := $(wildcard *.c)
+sources = $(patsubst %.c, $(LOCAL_DIR)/%.c, $(sources_rel))
 
-vpath %.c $(OUTPUT)
-vpath %.s $(OUTPUT)
-
-objects = $(patsubst %.c, $(OUTPUT)/%.o, $(sources))
-assembler_objects = $(patsubst %.S, $(OUTPUT)/%.o, $(assembler_sources))
+objects = $(patsubst %.c, $(OUTPUT)/%.o, $(sources_rel))
+assembler_objects = $(patsubst %.S, $(OUTPUT)/%.o, $(assembler_sources_rel))
 all_objects = $(objects)
 all_objects += $(assembler_objects)
 
@@ -36,11 +35,13 @@ EXTRA_ARCHIVE_FLAGS=rc
 .PHONY: library
 library: $(OUTLIB)
 
-$(OUTLIB): $(all_objects) 
+$(OUTLIB): $(objects) $(assembler_objects)
 	$(AR) $(EXTRA_ARCHIVE_FLAGS) $@ $^
 
-#$(all_objects): $(assembler_sources) $(sources) | $(OUTPUT)
-$(all_objects): %.S $(sources) | $(OUTPUT)
+$(assembler_objects): $(assembler_sources) | $(OUTPUT)
+	$(CC) $(INCLUDEPATH) -c $< -o $@
+
+$(objects): $(sources) | $(OUTPUT)
 	$(CC) $(INCLUDEPATH) -c $< -o $@
 
 $(OUTPUT):

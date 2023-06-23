@@ -1058,11 +1058,17 @@ u32 XFsbl_Qspi32Init(u32 DeviceFlags)
 					     XQSPIPSU_SELECT_FLASH_CS_BOTH,
 					     XQSPIPSU_SELECT_FLASH_BUS_BOTH);
 			Status = MacronixEnable4B(&QspiPsuInstance);
+			if (Status != XFSBL_SUCCESS) {
+				goto END;
+			}
 		} else {
 			XQspiPsu_SelectFlash(&QspiPsuInstance,
 					     XQSPIPSU_SELECT_FLASH_CS_LOWER,
 					     XQSPIPSU_SELECT_FLASH_BUS_LOWER);
 			Status = MacronixEnable4B(&QspiPsuInstance);
+			if (Status != XFSBL_SUCCESS) {
+				goto END;
+			}
 			if (Status != XFSBL_SUCCESS) {
 				UStatus = XFSBL_FAILURE;
 				goto END;
@@ -1074,6 +1080,9 @@ u32 XFsbl_Qspi32Init(u32 DeviceFlags)
 					XQSPIPSU_SELECT_FLASH_CS_UPPER,
 					XQSPIPSU_SELECT_FLASH_BUS_LOWER);
 				Status = MacronixEnable4B(&QspiPsuInstance);
+				if (Status != XFSBL_SUCCESS) {
+					goto END;
+				}
 			}
 		}
 	}

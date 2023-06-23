@@ -8,21 +8,24 @@ A53_STATE := 64
 CC = $(CROSS_COMPILE)gcc $(KCFLAGS)
 AR = $(CROSS_COMPILE)ar
 
-linker_script := -T$(CURDIR)/lscript.ld
+LOCAL_DIR = $(CURDIR)
+linker_script := -T$(LOCAL_DIR)/lscript.ld
 BOARD	:= zcu102
 LIBS = libxil.a
-export BUILD_OUTPUT = $(CURDIR)/dist
+export BUILD_OUTPUT = $(LOCAL_DIR)/dist
 EXEC := $(BUILD_OUTPUT)/fsbl_a53_zc102.elf
 
-source_files := $(wildcard *.c)
+source_files_ = $(wildcard *.c)
 source_files += generated/psu_init.c
-assembler_sources := $(wildcard *.S)
+source_files = $(patsubst %.c, $(LOCAL_DIR)/%.c, $(source_files_))
+assembler_sources_ := $(wildcard *.S)
+assembler_source = $(patsubst %.c, $(LOCAL_DIR)/%.c, $(assembler_sources__))
 
 includes := $(wildcard *.h)
-OBJS := $(patsubst %.c, $(BUILD_OUTPUT)/%.o, $(source_files))
-OBJS += $(patsubst %.S, $(BUILD_OUTPUT)/%.o, $(assembler_sources))
-OBJS_D := $(patsubst %.c, $(BUILD_OUTPUT)/%.d, $(source_files))
-OBJS_SD := $(patsubst %.S, $(BUILD_OUTPUT)/%.d, $(assembler_sources))
+C_SOURCE_OBJECTS = $(patsubst %.c, $(BUILD_OUTPUT)/%.o, $(source_files_))
+ASSEMBLER_SOURCE_OBJS = $(patsubst %.S, $(BUILD_OUTPUT)/%.o, $(assembler_sources_))
+OBJS_D := $(patsubst %.c, $(BUILD_OUTPUT)/%.d, $(source_files_))
+OBJS_SD := $(patsubst %.S, $(BUILD_OUTPUT)/%.d, $(assembler_sources_))
 
 
 COMPILE_DEFINES = -DARMA53_$(A53_STATE)
@@ -40,9 +43,9 @@ sub_component += lib/qspipsu
 #sub_component += lib/sdps 
 #sub_component += lib/xilpm/common
 
-INCLUDEPATH += -I$(CURDIR) 
-INCLUDEPATH += -I$(CURDIR)/generated 
-INCLUDEPATH += -I$(CURDIR)/lib/common 
+INCLUDEPATH += -I$(LOCAL_DIR) 
+INCLUDEPATH += -I$(LOCAL_DIR)/generated 
+INCLUDEPATH += -I$(LOCAL_DIR)/lib/common 
 INCLUDEPATH += $(addprefix -I,$(sub_component))
 
 DUMP    :=      $(CROSS_COMPILE)objdump -xSD
@@ -55,8 +58,8 @@ LDFLAGS += $(addprefix -L$(BUILD_OUTPUT)/,$(sub_component))
 all: $(EXEC)
 
 PHONY += $(EXEC)
-$(EXEC): $(LIBS) $(OBJS)
-	$(CC) -o $@ $(OBJS) $(LDFLAGS) $(linker_script)
+$(EXEC): $(LIBS) $(C_SOURCE_OBJECTS) $(ASSEMBLER_SOURCE_OBJS)
+	$(CC) -o $@ $(C_SOURCE_OBJECTS) $(ASSEMBLER_SOURCE_OBJS) $(LDFLAGS) $(linker_script)
 	$(DUMP) $(EXEC)  > dump
 
 PHONY += $(LIBS)
@@ -67,7 +70,10 @@ $(LIBS):
 		$(MAKE) --directory=$$d; \
 		done
 
-$(OBJS): $(source_files) $(assembler_sources) | $(BUILD_OUTPUT)
+$(C_SOURCE_OBJECTS): $(source_files) | $(BUILD_OUTPUT)
+	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDEPATH)
+
+$(ASSEMBLER_SOURCE_OBJS): $(assembler_sources)
 	$(CC) $(CFLAGS) -c $< -o $@ $(INCLUDEPATH)
 
 $(BUILD_OUTPUT): mk_gen
@@ -76,6 +82,10 @@ $(BUILD_OUTPUT): mk_gen
 mk_gen:
 	[ -d $(BUILD_OUTPUT)/generated ] || mkdir $(BUILD_OUTPUT)/generated
 
+dop:
+	echo $(source_files)
+	echo $(C_SOURCE_OBJECTS)
+
 PHONY += clean
 clean:
 	for d in $(sub_component); \
@@ -83,4 +93,4 @@ clean:
 		$(MAKE) --directory=$$d clean; \
 		done
 
-	rm -rf $(OBJS) $(OBJS_D) $(OBJS_SD) $(BUILD_OUTPUT) dump
+	rm -rf $(C_SOURCE_OBJECTS) $(ASSEMBLER_SOURCE_OBJS) $(OBJS_D) $(OBJS_SD) $(BUILD_OUTPUT) dump

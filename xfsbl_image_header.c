@@ -301,7 +301,7 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader *ImageHeader,
 			  u32 FlashImageOffsetAddress, u32 RunningCpu,
 			  u32 ImageHeaderTableAddressOffset)
 {
-	u32 Status;
+	u32 Status = XFSBL_FAILURE;
 	u32 PartitionHeaderAddress;
 	u32 PartitionIndex;
 	const XFsblPs_PartitionHeader *CurrPartitionHdr;
@@ -313,11 +313,13 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader *ImageHeader,
 	 * Read the Image header table of 64 bytes
 	 * and update the image header table structure
 	 */
-	if (DeviceOps != NULL) {
+	if (DeviceOps) {
 		Status = DeviceOps->DeviceCopy(
 			FlashImageOffsetAddress + ImageHeaderTableAddressOffset,
 			(PTRSIZE) & (ImageHeader->ImageHeaderTable),
 			XIH_IHT_LEN);
+
+		xil_printf("*%s Copy Status %d *** \n\r", Status);
 		if (XFSBL_SUCCESS != Status) {
 			XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
 			goto END;
@@ -329,7 +331,6 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader *ImageHeader,
 #endif
 	}
 
-	xil_printf("*%s Copy Status %d *** \n\r", Status);
 	/**
 	 * Check the validity of Image Header Table
 	 */
@@ -376,15 +377,6 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader *ImageHeader,
 				goto END;
 			}
 		} else {
-			PartitionHeaderAddress = PartitionHeaderAddress -
-						 ImageHeaderTableAddressOffset;
-#ifdef XFSBL_SECURE
-			XFsbl_MemCpy(
-				&(ImageHeader->PartitionHeader[PartitionIndex]),
-				(u8 *)(UINTPTR)(ImageHdr +
-						PartitionHeaderAddress),
-				XIH_PH_LEN);
-#endif
 		}
 		/**
 		 * Assumption: Next partition corresponds to ATF

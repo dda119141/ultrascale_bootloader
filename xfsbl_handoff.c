@@ -775,26 +775,12 @@ u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
 		}
 	}
 
-	/**
-	 * if XIP image present
-	 * Put QSPI in linear mode
-	 */
-
-	/**
-	 * FSBL hook before Handoff
-	 */
-	Status = XFsbl_HookBeforeHandoff(EarlyHandoff);
-	if (Status != XFSBL_SUCCESS) {
+	if (XFsbl_HookBeforeHandoff(EarlyHandoff) != XFSBL_SUCCESS) {
 		Status = XFSBL_ERROR_HOOK_BEFORE_HANDOFF;
 		XFsbl_Printf(DEBUG_GENERAL,
 			     "XFSBL_ERROR_HOOK_BEFORE_HANDOFF\r\n");
 		goto END;
 	}
-
-	/**
-	 * get cpu out of reset
-	 *
-	 */
 
 	/**
 	 * If we are doing early handoff, remember the CPU index to avoid

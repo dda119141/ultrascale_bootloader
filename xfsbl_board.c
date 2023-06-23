@@ -36,10 +36,10 @@
 #include "xfsbl_board.h"
 
 #include "psu_init.h"
-#if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106) || \
-    defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU111) || \
-    defined(XPS_BOARD_ZCU216) || defined(XPS_BOARD_ZCU208) || \
-    defined(XPS_BOARD_ZCU670)
+#if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106) ||                  \
+	defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU111) ||              \
+	defined(XPS_BOARD_ZCU216) || defined(XPS_BOARD_ZCU208) ||              \
+	defined(XPS_BOARD_ZCU670)
 /************************** Constant Definitions *****************************/
 
 /**************************** Type Definitions *******************************/
@@ -47,8 +47,8 @@
 /***************** Macros (Inline Functions) Definitions *********************/
 
 /************************** Function Prototypes ******************************/
-#if defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU216) || \
-    defined(XPS_BOARD_ZCU208) || defined(XPS_BOARD_ZCU670)
+#if defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU216) ||                  \
+	defined(XPS_BOARD_ZCU208) || defined(XPS_BOARD_ZCU670)
 static u32 XFsbl_ReadMinMaxEepromVadj(XIicPs *I2c0InstancePtr, u32 *MinVadj,
 				      u32 *MaxVadj);
 static u32 XFsbl_CalVadj(u16 MinVoltage, u16 MaxVoltage);
@@ -59,8 +59,8 @@ static u32 XFsbl_FMCEnable(XIicPs *I2c0InstancePtr, XIicPs *I2c1InstancePtr);
 static void XFsbl_PcieReset(void);
 #endif
 /************************** Variable Definitions *****************************/
-#if defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU216) || \
-    defined(XPS_BOARD_ZCU208) || defined(XPS_BOARD_ZCU670)
+#if defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU216) ||                  \
+	defined(XPS_BOARD_ZCU208) || defined(XPS_BOARD_ZCU670)
 /*****************************************************************************/
 /**
  * This function is used Read the min and max VADJ values from the FMC EEPROM.
@@ -75,12 +75,13 @@ static void XFsbl_PcieReset(void);
  *
  *****************************************************************************/
 static u32 XFsbl_ReadMinMaxEepromVadj(XIicPs *I2c0InstancePtr, u32 *MinVadj,
-				      u32 *MaxVadj) {
+				      u32 *MaxVadj)
+{
 	u32 Count;
 	u32 EepromByteCount;
 	XMultipleRecord XRecord;
-	u8 WriteBuffer[BUF_LEN] = {0U};
-	u8 Read_Buffer[MAX_SIZE] = {0U};
+	u8 WriteBuffer[BUF_LEN] = { 0U };
+	u8 Read_Buffer[MAX_SIZE] = { 0U };
 	u32 UStatus;
 	s32 Status;
 	u32 NominalVoltage;
@@ -132,50 +133,51 @@ static u32 XFsbl_ReadMinMaxEepromVadj(XIicPs *I2c0InstancePtr, u32 *MinVadj,
 		XRecord.MultirecordHdrOff = Read_Buffer[5U] * 8U;
 		do {
 			XRecord.RecordType =
-			    Read_Buffer[XRecord.MultirecordHdrOff];
+				Read_Buffer[XRecord.MultirecordHdrOff];
 			XRecord.MultirecordHdrEol =
-			    (Read_Buffer[XRecord.MultirecordHdrOff + 1U] &
-			     0x80U);
+				(Read_Buffer[XRecord.MultirecordHdrOff + 1U] &
+				 0x80U);
 			XRecord.RecordLength =
-			    Read_Buffer[XRecord.MultirecordHdrOff + 2U];
+				Read_Buffer[XRecord.MultirecordHdrOff + 2U];
 
 			if (XRecord.RecordType == DC_LOAD) {
 				XRecord.OutputNumber =
-				    Read_Buffer[XRecord.MultirecordHdrOff +
-						MULTIRECORD_HEADER_SIZE] &
-				    0x0FU;
+					Read_Buffer[XRecord.MultirecordHdrOff +
+						    MULTIRECORD_HEADER_SIZE] &
+					0x0FU;
 				if (XRecord.OutputNumber == 0x00U) {
 					XRecord.VadjRecordFound = 1U;
 					XRecord.VadjHdrOffset =
-					    XRecord.MultirecordHdrOff;
+						XRecord.MultirecordHdrOff;
 					XRecord.VadjDataOffset =
-					    XRecord.VadjHdrOffset +
-					    MULTIRECORD_HEADER_SIZE;
+						XRecord.VadjHdrOffset +
+						MULTIRECORD_HEADER_SIZE;
 					break;
 				}
 			}
-			XRecord.MultirecordHdrOff +=
-			    (XRecord.RecordLength + MULTIRECORD_HEADER_SIZE);
+			XRecord.MultirecordHdrOff += (XRecord.RecordLength +
+						      MULTIRECORD_HEADER_SIZE);
 		} while (XRecord.MultirecordHdrEol == 0x00U);
 
 		if (XRecord.VadjRecordFound == 1U) {
 			Count = XRecord.VadjDataOffset + 1U;
 			NominalVoltage =
-			    ((((u16)Read_Buffer[Count + 1U] << 8U) & 0xFF00U) |
-			     Read_Buffer[Count]);
+				((((u16)Read_Buffer[Count + 1U] << 8U) &
+				  0xFF00U) |
+				 Read_Buffer[Count]);
 			NominalVoltage = NominalVoltage * 10U;
 
 			Count = Count + 2U;
-			MinVoltage =
-			    ((((u16)Read_Buffer[Count + 1U] << 8U) & 0xFF00U) |
-			     Read_Buffer[Count]) *
-			    10U;
+			MinVoltage = ((((u16)Read_Buffer[Count + 1U] << 8U) &
+				       0xFF00U) |
+				      Read_Buffer[Count]) *
+				     10U;
 
 			Count = Count + 2U;
-			MaxVoltage =
-			    ((((u16)Read_Buffer[Count + 1U] << 8U) & 0xFF00U) |
-			     Read_Buffer[Count]) *
-			    10U;
+			MaxVoltage = ((((u16)Read_Buffer[Count + 1U] << 8U) &
+				       0xFF00U) |
+				      Read_Buffer[Count]) *
+				     10U;
 		}
 	}
 
@@ -195,7 +197,8 @@ END:
  * @return u32 VadjValue
  *
  *****************************************************************************/
-static u32 XFsbl_CalVadj(u16 MinVoltage, u16 MaxVoltage) {
+static u32 XFsbl_CalVadj(u16 MinVoltage, u16 MaxVoltage)
+{
 	u32 VadjValue;
 
 	if ((MinVoltage <= 1800U) && (MaxVoltage >= 1800U)) {
@@ -234,8 +237,9 @@ static u32 XFsbl_CalVadj(u16 MinVoltage, u16 MaxVoltage) {
  *	- errors as mentioned in xfsbl_error.h
  *
  *****************************************************************************/
-static u32 XFsbl_FMCEnable(XIicPs *I2c0InstancePtr, XIicPs *I2c1InstancePtr) {
-	u8 WriteBuffer[BUF_LEN] = {0U};
+static u32 XFsbl_FMCEnable(XIicPs *I2c0InstancePtr, XIicPs *I2c1InstancePtr)
+{
+	u8 WriteBuffer[BUF_LEN] = { 0U };
 	s32 Status;
 	u32 UStatus;
 	u32 SlaveAddr;
@@ -245,6 +249,7 @@ static u32 XFsbl_FMCEnable(XIicPs *I2c0InstancePtr, XIicPs *I2c1InstancePtr) {
 	if (Status != XST_SUCCESS) {
 		UStatus = XFSBL_ERROR_I2C_SET_SCLK;
 		XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_I2C_SET_SCLK\r\n");
+		goto END;
 	}
 
 	/* Set I2C Mux for channel-2 */
@@ -305,13 +310,14 @@ END:
  * 		- errors as mentioned in xfsbl_error.h
  *
  *****************************************************************************/
-static u32 XFsbl_BoardConfig(void) {
+static u32 XFsbl_BoardConfig(void)
+{
 	XIicPs I2c0Instance, I2c1Instance;
 	XIicPs_Config *I2c0CfgPtr;
 	s32 Status;
 	u32 UStatus;
 #if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106)
-	u8 WriteBuffer[BUF_LEN] = {0U};
+	u8 WriteBuffer[BUF_LEN] = { 0U };
 #endif
 
 #if defined(XPS_BOARD_ZCU102)
@@ -368,15 +374,15 @@ static u32 XFsbl_BoardConfig(void) {
 
 #if defined(XPS_BOARD_ZCU102)
 	ICMCfgLane[0U] =
-	    XFsbl_In32(SERDES_ICM_CFG0) & SERDES_ICM_CFG0_L0_ICM_CFG_MASK;
-	ICMCfgLane[1U] =
-	    (XFsbl_In32(SERDES_ICM_CFG0) & SERDES_ICM_CFG0_L1_ICM_CFG_MASK) >>
-	    SERDES_ICM_CFG0_L1_ICM_CFG_SHIFT;
+		XFsbl_In32(SERDES_ICM_CFG0) & SERDES_ICM_CFG0_L0_ICM_CFG_MASK;
+	ICMCfgLane[1U] = (XFsbl_In32(SERDES_ICM_CFG0) &
+			  SERDES_ICM_CFG0_L1_ICM_CFG_MASK) >>
+			 SERDES_ICM_CFG0_L1_ICM_CFG_SHIFT;
 	ICMCfgLane[2U] =
-	    XFsbl_In32(SERDES_ICM_CFG1) & (SERDES_ICM_CFG1_L2_ICM_CFG_MASK);
-	ICMCfgLane[3U] =
-	    (XFsbl_In32(SERDES_ICM_CFG1) & SERDES_ICM_CFG1_L3_ICM_CFG_MASK) >>
-	    SERDES_ICM_CFG1_L3_ICM_CFG_SHIFT;
+		XFsbl_In32(SERDES_ICM_CFG1) & (SERDES_ICM_CFG1_L2_ICM_CFG_MASK);
+	ICMCfgLane[3U] = (XFsbl_In32(SERDES_ICM_CFG1) &
+			  SERDES_ICM_CFG1_L3_ICM_CFG_MASK) >>
+			 SERDES_ICM_CFG1_L3_ICM_CFG_SHIFT;
 
 	/* For ZCU102 board, check if GT combination is valid against the lane#
 	 */
@@ -467,12 +473,13 @@ END:
  * @return none
  *
  *****************************************************************************/
-static void XFsbl_PcieReset(void) {
+static void XFsbl_PcieReset(void)
+{
 	u32 RegVal;
 	u32 ICMCfg0L0;
 
 	ICMCfg0L0 =
-	    XFsbl_In32(SERDES_ICM_CFG0) & SERDES_ICM_CFG0_L0_ICM_CFG_MASK;
+		XFsbl_In32(SERDES_ICM_CFG0) & SERDES_ICM_CFG0_L0_ICM_CFG_MASK;
 
 	/* Give reset only if we have PCIe in design */
 	if (ICMCfg0L0 == ICM_CFG_VAL_PCIE) {
@@ -514,12 +521,13 @@ static void XFsbl_PcieReset(void) {
  * 		- errors as mentioned in xfsbl_error.h
  *
  *****************************************************************************/
-u32 XFsbl_BoardInit(void) {
+u32 XFsbl_BoardInit(void)
+{
 	u32 Status;
-#if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106) || \
-    defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU111) || \
-    defined(XPS_BOARD_ZCU216) || defined(XPS_BOARD_ZCU208) || \
-    defined(XPS_BOARD_ZCU670)
+#if defined(XPS_BOARD_ZCU102) || defined(XPS_BOARD_ZCU106) ||                  \
+	defined(XPS_BOARD_ZCU104) || defined(XPS_BOARD_ZCU111) ||              \
+	defined(XPS_BOARD_ZCU216) || defined(XPS_BOARD_ZCU208) ||              \
+	defined(XPS_BOARD_ZCU670)
 	/* Program I2C to configure GT lanes */
 	Status = XFsbl_BoardConfig();
 	if (Status != XFSBL_SUCCESS) {
