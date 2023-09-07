@@ -92,13 +92,13 @@ void Xil_DCacheEnable(void)
 {
 	u32 CtrlReg;
 
-	if (EL3 == 1) {
+#if EL3==1
 		CtrlReg = mfcp(SCTLR_EL3);
-	} else if (EL1_NONSECURE == 1) {
+#elif EL1_NONSECURE==1
 		CtrlReg = mfcp(SCTLR_EL1);
-	} else {
+#else
 		CtrlReg = 0U;
-	}
+#endif
 
 	/* enable caches only if they are disabled */
 	if((CtrlReg & XREG_CONTROL_DCACHE_BIT) == 0X00000000U){
@@ -108,13 +108,13 @@ void Xil_DCacheEnable(void)
 
 		CtrlReg |= XREG_CONTROL_DCACHE_BIT;
 
-		if (EL3 == 1) {
+#if EL3==1
 			/* enable the Data cache for el3*/
 			mtcp(SCTLR_EL3,CtrlReg);
-		} else if (EL1_NONSECURE == 1) {
+#elif EL1_NONSECURE==1
 			/* enable the Data cache for el1*/
 			mtcp(SCTLR_EL1,CtrlReg);
-		}
+#endif
 	}
 }
 
@@ -745,13 +745,13 @@ void Xil_ICacheEnable(void)
 {
 	u32 CtrlReg;
 
-	if (EL3 == 1) {
+	#if EL3 == 1 
 		CtrlReg = mfcp(SCTLR_EL3);
-	} else if (EL1_NONSECURE == 1) {
+	#elif (EL1_NONSECURE == 1) 
 		CtrlReg = mfcp(SCTLR_EL1);
-	} else {
+	#else
 		CtrlReg = 0U;
-	}
+	#endif
 
 	/* enable caches only if they are disabled */
 	if((CtrlReg & XREG_CONTROL_ICACHE_BIT)==0x00000000U){
@@ -760,14 +760,14 @@ void Xil_ICacheEnable(void)
 
 		CtrlReg |= XREG_CONTROL_ICACHE_BIT;
 
-		if (EL3 == 1) {
+	#if EL3 == 1 
 			/* enable the instruction cache for el3*/
 			mtcp(SCTLR_EL3,CtrlReg);
-		} else if (EL1_NONSECURE == 1) {
+	#elif (EL1_NONSECURE == 1) 
 			/* enable the instruction cache for el1*/
 			mtcp(SCTLR_EL1,CtrlReg);
+	#endif
 		}
-	}
 }
 
 /****************************************************************************/

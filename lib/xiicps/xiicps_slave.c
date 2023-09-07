@@ -226,7 +226,6 @@ s32 XIicPs_SlaveSendPolled(XIicPs *InstancePtr, u8 *MsgPtr, s32 ByteCount)
 	s32 BytesToSend;
 	s32 Error = 0;
 	s32 Status = (s32)XST_SUCCESS;
-	_Bool Value;
 	_Bool Result;
 	volatile u32 RegValue;
 	u32 Timeout = XIICPS_POLL_DEFAULT_TIMEOUT_VAL;
@@ -265,6 +264,7 @@ s32 XIicPs_SlaveSendPolled(XIicPs *InstancePtr, u8 *MsgPtr, s32 ByteCount)
 	if (Error != 0) {
 		Status = (s32)XST_FAILURE;
 	} else {
+		_Bool Value;
 
 		/*
 		 * Clear the interrupt status register.
