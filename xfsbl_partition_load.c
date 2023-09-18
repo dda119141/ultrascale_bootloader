@@ -83,14 +83,15 @@
 #endif
 
 /************************** Function Prototypes ******************************/
-static u32 XFsbl_PartitionHeaderValidation(XFsblPs *FsblInstancePtr,
+static u32 XFsbl_PartitionHeaderValidation(XFsblPs *const FsblInstancePtr,
 					   u32 PartitionNum);
 static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum);
-static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr,
+static u32 XFsbl_PartitionValidation(XFsblPs *const FsblInstancePtr,
 				     u32 PartitionNum);
-static u32 XFsbl_CheckHandoffCpu(const XFsblPs *FsblInstancePtr,
+static u32 XFsbl_CheckHandoffCpu(const XFsblPs *const FsblInstancePtr,
 				 u32 DestinationCpu);
-static void XFsbl_CheckPmuFw(const XFsblPs *FsblInstancePtr, u32 PartitionNum);
+static void XFsbl_CheckPmuFw(const XFsblPs *const FsblInstancePtr,
+			     u32 PartitionNum);
 
 #ifdef XFSBL_BS
 static void XFsbl_SetBSSecureState(u32 State);
@@ -146,7 +147,7 @@ extern u8 ReadBuffer[READ_BUFFER_SIZE];
  * 			returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-u32 XFsbl_PartitionLoad(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+u32 XFsbl_PartitionLoad(XFsblPs *const FsblInstancePtr, u32 PartitionNum)
 {
 	u32 Status;
 #ifdef ARMR5
@@ -274,7 +275,7 @@ END:
  * @note
  *
  *****************************************************************************/
-static u32 XFsbl_CheckHandoffCpu(const XFsblPs *FsblInstancePtr,
+static u32 XFsbl_CheckHandoffCpu(const XFsblPs *const FsblInstancePtr,
 				 u32 DestinationCpu)
 {
 	u32 ValidHandoffCpuNo;
@@ -525,7 +526,7 @@ END:
  * @return	returns the error codes described in xfsbl_error.h on any error
  * 			returns XFSBL_SUCCESS on success
  *****************************************************************************/
-static u32 XFsbl_PartitionCopy(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+static u32 XFsbl_PartitionCopy(XFsblPs *const FsblInstancePtr, u32 PartitionNum)
 {
 	u32 Status;
 	u32 DestinationCpu;
@@ -639,7 +640,8 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr, u32 PartitionNum)
+static u32 XFsbl_PartitionValidation(XFsblPs *const FsblInstancePtr,
+				     u32 PartitionNum)
 {
 	u32 Status = XFSBL_SUCCESS;
 	return Status;
@@ -656,7 +658,8 @@ static u32 XFsbl_PartitionValidation(XFsblPs *FsblInstancePtr, u32 PartitionNum)
  * @return	None
  *
  *****************************************************************************/
-static void XFsbl_CheckPmuFw(const XFsblPs *FsblInstancePtr, u32 PartitionNum)
+static void XFsbl_CheckPmuFw(const XFsblPs *const FsblInstancePtr,
+			     u32 PartitionNum)
 {
 	u32 DestinationCpu;
 	u32 DestinationCpuNxt;

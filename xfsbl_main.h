@@ -189,23 +189,23 @@ void XFsbl_MeasurePerfTime(XTime tCur);
 /**
  * Functions defined in xfsbl_initialization.c
  */
-u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr);
-u32 XFsbl_BootDeviceInit(XFsblPs *FsblInstancePtr);
-u32 XFsbl_TcmEccInit(XFsblPs *FsblInstancePtr, u32 CpuId);
+u32 XFsbl_Initialize(XFsblPs *const FsblInstancePtr);
+u32 XFsbl_BootDeviceInit(XFsblPs *const FsblInstancePtr);
+u32 XFsbl_TcmEccInit(XFsblPs *const FsblInstancePtr, u32 CpuId);
 void XFsbl_MarkDdrAsReserved(u8 Cond);
 
 /**
  * Functions defined in xfsbl_partition_load.c
  */
-u32 XFsbl_PartitionLoad(XFsblPs *FsblInstancePtr, u32 PartitionNum);
+u32 XFsbl_PartitionLoad(XFsblPs *const FsblInstancePtr, u32 PartitionNum);
 u32 XFsbl_PowerUpMemory(u32 MemoryType);
 /**
  * Functions defined in xfsbl_handoff.c
  */
-u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
+u32 XFsbl_Handoff(const XFsblPs *const FsblInstancePtr, u32 PartitionNum,
 		  u32 EarlyHandoff);
 void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags);
-u32 XFsbl_CheckEarlyHandoff(XFsblPs *FsblInstancePtr, u32 PartitionNum);
+u32 XFsbl_CheckEarlyHandoff(XFsblPs *const FsblInstancePtr, u32 PartitionNum);
 /************************** Variable Definitions *****************************/
 
 #ifdef __cplusplus

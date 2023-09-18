@@ -76,7 +76,6 @@ static u32 XFsbl_SetCpuPwrSettings(u32 CpuSettings, u32 Flags);
 static void XFsbl_UpdateResetVector(u64 HandOffAddress, u32 CpuSettings,
 				    u32 HandoffType, u32 Vector);
 static u32 XFsbl_Is32BitCpu(u32 CpuSettings);
-static u32 XFsbl_CheckEarlyHandoffCpu(u32 CpuId);
 static u32 XFsbl_ProtectionConfig(void);
 
 /**
@@ -86,12 +85,6 @@ extern void XFsbl_Exit(PTRSIZE HandoffAddress, u32 Flags);
 
 /************************** Variable Definitions *****************************/
 
-#ifdef ARMR5
-/* Variables defined in xfsbl_partition_load.c */
-extern u8 R5LovecBuffer[32];
-extern u32 TcmSkipLength;
-extern PTRSIZE TcmSkipAddress;
-#endif
 extern u32 SdCdnRegVal;
 
 static u32 XFsbl_Is32BitCpu(u32 CpuSettings)
@@ -698,11 +691,10 @@ static void XFsbl_UpdateResetVector(u64 HandOffAddress, u32 CpuSettings,
  *
  *****************************************************************************/
 
-u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
+u32 XFsbl_Handoff(const XFsblPs *const FsblInstancePtr, u32 PartitionNum,
 		  u32 EarlyHandoff)
 {
 	u32 Status;
-	u32 CpuIndex;
 	u32 CpuId;
 	u32 ExecState;
 	u32 CpuSettings;
@@ -710,9 +702,7 @@ u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
 	u64 RunningCpuHandoffAddress = 0U;
 	u32 RunningCpuExecState = 0U;
 	u32 RunningCpuHandoffAddressPresent = FALSE;
-	u32 CpuNeedsEarlyHandoff;
 	const XFsblPs_PartitionHeader *PartitionHeader;
-	static u32 CpuIndexEarlyHandoff = 0;
 
 	/* Restoring the SD card detection signal */
 	XFsbl_Out32(IOU_SLCR_SD_CDN_CTRL, SdCdnRegVal);
@@ -782,16 +772,7 @@ u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
 		goto END;
 	}
 
-	/**
-	 * If we are doing early handoff, remember the CPU index to avoid
-	 * traversing through for the next early handoff
-	 */
-	if (EarlyHandoff == TRUE) {
-		CpuIndex = CpuIndexEarlyHandoff;
-	} else {
-		CpuIndex = 0U;
-	}
-
+	u32 CpuIndex = 0U;
 	while (CpuIndex < FsblInstancePtr->HandoffCpuNo) {
 		CpuSettings =
 			FsblInstancePtr->HandoffValues[CpuIndex].CpuSettings;
@@ -801,191 +782,115 @@ u32 XFsbl_Handoff(const XFsblPs *FsblInstancePtr, u32 PartitionNum,
 
 		/**
 		 * Run the code in this loop in the below conditions:
-		 * - This function called for early handoff and CPU needs early
-		 * handoff
-		 * - This function called for regular handoff and CPU doesn't
-		 * need early handoff
-		 * - This function called for regular handoff and CPU needs
-		 * early handoff AND if handoff is to running CPU
-		 *
+		 * - HandOffCPU is not the running CPU
 		 */
-		CpuNeedsEarlyHandoff = XFsbl_CheckEarlyHandoffCpu(CpuId);
-		if (((CpuNeedsEarlyHandoff == TRUE) &&
-		     (EarlyHandoff == TRUE)) ||
-		    ((EarlyHandoff != TRUE) &&
-		     (CpuNeedsEarlyHandoff != TRUE)) ||
-		    (((EarlyHandoff != TRUE) &&
-		      (CpuNeedsEarlyHandoff == TRUE)) &&
-		     (CpuId == FsblInstancePtr->ProcessorID))) {
-			/**
-			 * Check if handoff address is present
-			 */
-			if (CpuId != FsblInstancePtr->ProcessorID) {
-				/* Check if handoff CPU is supported */
-				Status = XFsbl_CheckSupportedCpu(CpuId);
-				if (XFSBL_SUCCESS != Status) {
-					XFsbl_Printf(
-						DEBUG_GENERAL,
-						"XFSBL_ERROR_UNAVAILABLE_CPU\n\r");
-					Status = XFSBL_ERROR_UNAVAILABLE_CPU;
-					goto END;
-				}
+		if (CpuId != FsblInstancePtr->ProcessorID) {
+			/* Check if handoff CPU is supported */
+			Status = XFsbl_CheckSupportedCpu(CpuId);
+			if (XFSBL_SUCCESS != Status) {
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_UNAVAILABLE_CPU\n\r");
+				Status = XFSBL_ERROR_UNAVAILABLE_CPU;
+				goto END;
+			}
 
-				/**
+			/**
 				 * Check for power status of the cpu
 				 * Update the IVT
 				 * Take cpu out of reset
 				 */
-				Status = XFsbl_SetCpuPwrSettings(
-					CpuSettings, XFSBL_CPU_POWER_UP);
-				if (XFSBL_SUCCESS != Status) {
-					XFsbl_Printf(DEBUG_GENERAL,
-						     "Power Up "
-						     "Cpu 0x%0lx failed \n\r",
-						     CpuId);
+			Status = XFsbl_SetCpuPwrSettings(CpuSettings,
+							 XFSBL_CPU_POWER_UP);
+			if (XFSBL_SUCCESS != Status) {
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "Power Up "
+					     "Cpu 0x%0lx failed \n\r",
+					     CpuId);
 
-					XFsbl_Printf(
-						DEBUG_GENERAL,
-						"XFSBL_ERROR_PWR_UP_CPU\n\r");
-					Status = XFSBL_ERROR_PWR_UP_CPU;
-					goto END;
-				}
+				XFsbl_Printf(DEBUG_GENERAL,
+					     "XFSBL_ERROR_PWR_UP_CPU\n\r");
+				Status = XFSBL_ERROR_PWR_UP_CPU;
+				goto END;
+			}
 
-				/**
+			/**
 				 * Read the handoff address from structure
 				 */
-				HandoffAddress =
-					(u64)FsblInstancePtr
-						->HandoffValues[CpuIndex]
-						.HandoffAddress;
+			HandoffAddress =
+				(u64)FsblInstancePtr->HandoffValues[CpuIndex]
+					.HandoffAddress;
 
-				/**
+			/**
 				 * Update the handoff address at reset vector
 				 * address
 				 */
-				XFsbl_UpdateResetVector(
-					HandoffAddress, CpuSettings,
-					OTHER_CPU_HANDOFF,
-					XFsbl_GetVectorLocation(
-						PartitionHeader) >>
-						XIH_ATTRB_VECTOR_LOCATION_SHIFT);
+			XFsbl_UpdateResetVector(
+				HandoffAddress, CpuSettings, OTHER_CPU_HANDOFF,
+				XFsbl_GetVectorLocation(PartitionHeader) >>
+					XIH_ATTRB_VECTOR_LOCATION_SHIFT);
 
-				XFsbl_Printf(DEBUG_INFO,
-					     "CPU 0x%0lx reset release, "
-					     "Exec State 0x%0lx, "
-					     "HandoffAddress: %0lx\n\r",
-					     CpuId, ExecState,
-					     (PTRSIZE)HandoffAddress);
+			XFsbl_Printf(DEBUG_INFO,
+				     "CPU 0x%0lx reset release, "
+				     "Exec State 0x%0lx, "
+				     "HandoffAddress: %0lx\n\r",
+				     CpuId, ExecState, (PTRSIZE)HandoffAddress);
 
-				/**
+			/**
 				 * Take CPU out of reset
 				 */
-				Status = XFsbl_SetCpuPwrSettings(
-					CpuSettings, XFSBL_CPU_SWRST);
-				if (XFSBL_SUCCESS != Status) {
-					goto END;
-				}
-			} else {
-				/**
+			Status = XFsbl_SetCpuPwrSettings(CpuSettings,
+							 XFSBL_CPU_SWRST);
+			if (XFSBL_SUCCESS != Status) {
+				goto END;
+			}
+		} else {
+			/**
 				 * Update the running cpu handoff address
 				 */
-				if (RunningCpuHandoffAddressPresent == FALSE) {
-					RunningCpuHandoffAddressPresent = TRUE;
-				}
-				RunningCpuHandoffAddress =
-					(u64)FsblInstancePtr
-						->HandoffValues[CpuIndex]
-						.HandoffAddress;
-				RunningCpuExecState = ExecState;
+			if (RunningCpuHandoffAddressPresent == FALSE) {
+				RunningCpuHandoffAddressPresent = TRUE;
+			}
+			RunningCpuHandoffAddress =
+				(u64)FsblInstancePtr->HandoffValues[CpuIndex]
+					.HandoffAddress;
+			RunningCpuExecState = ExecState;
 
-				/**
+			/**
 				 * Update reset vector address for
 				 * - FSBL running on A53-0 (64bit), handoff to
 				 * A53-0 (32 bit)
 				 * - FSBL running on A53-0 (32bit), handoff to
 				 * A53-0 (64 bit)
 				 */
-				if ((FsblInstancePtr->A53ExecState ==
-				     XIH_PH_ATTRB_A53_EXEC_ST_AA64) &&
-				    (ExecState ==
-				     XIH_PH_ATTRB_A53_EXEC_ST_AA32)) {
-					Status =
-						XFSBL_ERROR_UNSUPPORTED_HANDOFF;
-					XFsbl_Printf(
-						DEBUG_GENERAL,
-						"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
-						"A53-0 64 bit to 32 bit\n\r");
-					goto END;
-				} else if ((FsblInstancePtr->A53ExecState ==
-					    XIH_PH_ATTRB_A53_EXEC_ST_AA32) &&
-					   (ExecState ==
-					    XIH_PH_ATTRB_A53_EXEC_ST_AA64)) {
-					Status =
-						XFSBL_ERROR_UNSUPPORTED_HANDOFF;
-					XFsbl_Printf(
-						DEBUG_GENERAL,
-						"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
-						"A53-0 32 bit to 64 bit\n\r");
-					goto END;
-				} else {
-					/* for MISRA C compliance */
-				}
-			}
-		}
-
-		if ((EarlyHandoff == TRUE) && (CpuNeedsEarlyHandoff == TRUE)) {
-			/* Enable cache again as we will continue loading
-			 * partitions */
-			Xil_DCacheEnable();
-
-			if (PartitionNum <
-			    (FsblInstancePtr->ImageHeader.ImageHeaderTable
-				     .NoOfPartitions -
-			     1U)) {
-				/**
-				 * If this is not the last handoff CPU, return
-				 * back and continue loading remaining
-				 * partitions in stage 3
-				 */
-				CpuIndexEarlyHandoff++;
-				Status = STATUS_PARTITION_LOAD_IN_PROGRESS;
+			if ((FsblInstancePtr->A53ExecState ==
+			     XIH_PH_ATTRB_A53_EXEC_ST_AA64) &&
+			    (ExecState == XIH_PH_ATTRB_A53_EXEC_ST_AA32)) {
+				Status = XFSBL_ERROR_UNSUPPORTED_HANDOFF;
+				XFsbl_Printf(
+					DEBUG_GENERAL,
+					"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
+					"A53-0 64 bit to 32 bit\n\r");
+				goto END;
+			} else if ((FsblInstancePtr->A53ExecState ==
+				    XIH_PH_ATTRB_A53_EXEC_ST_AA32) &&
+				   (ExecState ==
+				    XIH_PH_ATTRB_A53_EXEC_ST_AA64)) {
+				Status = XFSBL_ERROR_UNSUPPORTED_HANDOFF;
+				XFsbl_Printf(
+					DEBUG_GENERAL,
+					"XFSBL_ERROR_UNSUPPORTED_HANDOFF : "
+					"A53-0 32 bit to 64 bit\n\r");
+				goto END;
 			} else {
-				/**
-				 * Early handoff to all required CPUs is done,
-				 * continue with regular handoff for remaining
-				 * applications, as applicable
-				 */
-				Status = XFSBL_STATUS_CONTINUE_OTHER_HANDOFF;
+				/* for MISRA C compliance */
 			}
-			goto END;
 		}
 
 		/**
 		 * Go to the next cpu
 		 */
 		CpuIndex++;
-		CpuIndexEarlyHandoff++;
 	}
-
-#ifdef ARMR5
-
-	/**
-	 * Remove the R5 vectors from TCM and load APP data
-	 * if present
-	 */
-
-	if (TcmSkipLength != 0U) {
-		/* Restore R5LovecBuffer to LOVEC
-		 * This will store partitions vectors to LOVEC
-		 * TcmSkipAddress is always 0x0,TcmSkipLength is 32.
-		 */
-		(void)XFsbl_MemCpy((u8 *)TcmSkipAddress, (u8 *)R5LovecBuffer,
-				   TcmSkipLength);
-		XFsbl_Printf(DEBUG_DETAILED,
-			     "XFsbl_Handoff:Restored R5LovecBuffer to LOVEC "
-			     "for R5.\n\r");
-	}
-#endif
 
 	/**
 	 * Mark Error status with Fsbl completed
@@ -1023,6 +928,7 @@ END:
 	return Status;
 }
 
+#if 0
 /*****************************************************************************/
 /**
  * This function determines if the given CPU needs early handoff or not.
@@ -1045,6 +951,7 @@ static u32 XFsbl_CheckEarlyHandoffCpu(u32 CpuId)
 #endif
 	return CpuNeedEarlyHandoff;
 }
+#endif
 
 /*****************************************************************************/
 /**

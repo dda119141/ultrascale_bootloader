@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
 
-project(fsboot_a53_zc102 LANGUAGES C ASM)
+project(fsboot_a53_zc102.elf LANGUAGES C ASM)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 #set(CMAKE_C_STANDARD 99)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_executable(fsboot_a53_zc102 
+add_executable(${PROJECT_NAME} 
 	xfsbl_exit.S
 	xfsbl_board.c
 	xfsbl_hooks.c
@@ -23,7 +23,7 @@ add_executable(fsboot_a53_zc102
 	generated/psu_init.c
 	)
 
-target_compile_options(fsboot_a53_zc102 PRIVATE
+target_compile_options(${PROJECT_NAME} PRIVATE
 			-Os -MMD -MP
 			-DARMA53_64
 			-D__aarch64__
@@ -31,25 +31,25 @@ target_compile_options(fsboot_a53_zc102 PRIVATE
 			-flto -ffat-lto-objects
 			 )
 
-target_include_directories(fsboot_a53_zc102 PRIVATE 
+target_include_directories(${PROJECT_NAME} PRIVATE 
 	"lib/uartps"
 	"lib/qspipsu"
 	"lib/xiicps"
 	"generated"
 	"lib/common")
 
-target_link_libraries(fsboot_a53_zc102 PRIVATE 
+target_link_libraries(${PROJECT_NAME} PRIVATE 
 	"xil"
 	"uartps"
 	"common"
 	"qspipsu"
 	"iicps")
 
-target_link_options(fsboot_a53_zc102 PRIVATE 
+target_link_options(${PROJECT_NAME} PRIVATE 
 	-T${CMAKE_SOURCE_DIR}/lscript.ld 
 		)
 
-set_target_properties(fsboot_a53_zc102 PROPERTIES
+set_target_properties(${PROJECT_NAME} PROPERTIES
  LINK_DEPENDS "${LINKER_SCRIPT}"
  LINK_FLAGS "-DARMA53_64 -MMD -MP -Wall -fmessage-length=0 -Os -flto -ffat-lto-objects"
  ) 
@@ -61,5 +61,5 @@ add_subdirectory(lib/qspipsu)
 add_subdirectory(lib/xiicps)
 
 include(clang_tidy)
-AddClangTidy(fsboot_a53_zc102)
+AddClangTidy(${PROJECT_NAME})
 

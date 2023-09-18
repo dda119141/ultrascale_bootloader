@@ -79,7 +79,7 @@
 /************************** Function Prototypes ******************************/
 
 /************************** Variable Definitions *****************************/
-#define IRQ_FIQ_MASK 0xC0U	/* Mask IRQ and FIQ interrupts in cpsr */
+#define IRQ_FIQ_MASK 0xC0U /* Mask IRQ and FIQ interrupts in cpsr */
 
 /****************************************************************************/
 /**
@@ -92,28 +92,27 @@ void Xil_DCacheEnable(void)
 {
 	u32 CtrlReg;
 
-#if EL3==1
-		CtrlReg = mfcp(SCTLR_EL3);
-#elif EL1_NONSECURE==1
-		CtrlReg = mfcp(SCTLR_EL1);
+#if EL3 == 1
+	CtrlReg = mfcp(SCTLR_EL3);
+#elif EL1_NONSECURE == 1
+	CtrlReg = mfcp(SCTLR_EL1);
 #else
-		CtrlReg = 0U;
+	CtrlReg = 0U;
 #endif
 
 	/* enable caches only if they are disabled */
-	if((CtrlReg & XREG_CONTROL_DCACHE_BIT) == 0X00000000U){
-
+	if ((CtrlReg & XREG_CONTROL_DCACHE_BIT) == 0X00000000U) {
 		/* invalidate the Data cache */
 		Xil_DCacheInvalidate();
 
 		CtrlReg |= XREG_CONTROL_DCACHE_BIT;
 
-#if EL3==1
-			/* enable the Data cache for el3*/
-			mtcp(SCTLR_EL3,CtrlReg);
-#elif EL1_NONSECURE==1
-			/* enable the Data cache for el1*/
-			mtcp(SCTLR_EL1,CtrlReg);
+#if EL3 == 1
+		/* enable the Data cache for el3*/
+		mtcp(SCTLR_EL3, CtrlReg);
+#elif EL1_NONSECURE == 1
+		/* enable the Data cache for el1*/
+		mtcp(SCTLR_EL1, CtrlReg);
 #endif
 	}
 }
@@ -140,24 +139,22 @@ void Xil_DCacheDisable(void)
 	register u32 CacheLevel;
 
 	dsb();
-	asm(
-	"mov 	x0, #0\n\t"
-#if EL3==1
-	"mrs	x0, sctlr_el3 \n\t"
-	"and	w0, w0, #0xfffffffb\n\t"
-	"msr	sctlr_el3, x0\n\t"
-#elif EL1_NONSECURE==1
-	"mrs	x0, sctlr_el1 \n\t"
-	"and	w0, w0, #0xfffffffb\n\t"
-	"msr	sctlr_el1, x0\n\t"
+	asm("mov 	x0, #0\n\t"
+#if EL3 == 1
+	    "mrs	x0, sctlr_el3 \n\t"
+	    "and	w0, w0, #0xfffffffb\n\t"
+	    "msr	sctlr_el3, x0\n\t"
+#elif EL1_NONSECURE == 1
+	    "mrs	x0, sctlr_el1 \n\t"
+	    "and	w0, w0, #0xfffffffb\n\t"
+	    "msr	sctlr_el1, x0\n\t"
 #endif
-	"dsb sy\n\t"
-	);
+	    "dsb sy\n\t");
 
 	/* Number of level of cache*/
 	CacheLevel = 0U;
 	/* Select cache level 0 and D cache in CSSR */
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
@@ -182,7 +179,7 @@ void Xil_DCacheDisable(void)
 	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
 		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
 		Set = 0U;
@@ -194,7 +191,7 @@ void Xil_DCacheDisable(void)
 
 	/* Select cache level 1 and D cache in CSSR */
 	CacheLevel += (0x00000001U << 1U);
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
@@ -210,28 +207,28 @@ void Xil_DCacheDisable(void)
 	NumSet = (CsidReg >> 13U) & 0x00007FFFU;
 	NumSet += 0x00000001U;
 
-	WayAdjust=clz(NumWays) - (u32)0x0000001FU;
+	WayAdjust = clz(NumWays) - (u32)0x0000001FU;
 
 	Way = 0U;
 	Set = 0U;
 
 	/* Flush all the cachelines */
-	for (WayIndex =0U; WayIndex < NumWays; WayIndex++) {
-		for (SetIndex =0U; SetIndex < NumSet; SetIndex++) {
+	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
+		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
-		Set=0U;
-		Way += (0x00000001U<<WayAdjust);
+		Set = 0U;
+		Way += (0x00000001U << WayAdjust);
 	}
 	/* Wait for Flush to complete */
 	dsb();
 
-#if defined (VERSAL_NET)
+#if defined(VERSAL_NET)
 	/* Select cache level 2 and D cache in CSSR */
 	CacheLevel += (0x00000001U << 1U);
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
@@ -247,32 +244,31 @@ void Xil_DCacheDisable(void)
 	NumSet = (CsidReg >> 13U) & 0x00007FFFU;
 	NumSet += 0x00000001U;
 
-	WayAdjust=clz(NumWays) - (u32)0x0000001FU;
+	WayAdjust = clz(NumWays) - (u32)0x0000001FU;
 	Way = 0U;
 	Set = 0U;
 
 	/* Flush all the cachelines */
-	for (WayIndex =0U; WayIndex < NumWays; WayIndex++) {
-		for (SetIndex =0U; SetIndex < NumSet; SetIndex++) {
+	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
+		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
-		Set=0U;
-		Way += (0x00000001U<<WayAdjust);
+		Set = 0U;
+		Way += (0x00000001U << WayAdjust);
 	}
 	/* Wait for Flush to complete */
 	dsb();
 #endif
 	asm(
-#if EL3==1
+#if EL3 == 1
 		"tlbi 	ALLE3\n\t"
-#elif EL1_NONSECURE==1
+#elif EL1_NONSECURE == 1
 		"tlbi 	VMALLE1\n\t"
 #endif
 		"dsb sy\r\n"
-		"isb\n\t"
-	);
+		"isb\n\t");
 }
 
 /****************************************************************************/
@@ -295,18 +291,17 @@ void Xil_DCacheInvalidate(void)
 {
 	register u32 CsidReg, C7Reg;
 	u32 LineSize, NumWays;
-	u32 Way, WayIndex,WayAdjust, Set, SetIndex, NumSet, CacheLevel;
+	u32 Way, WayIndex, WayAdjust, Set, SetIndex, NumSet, CacheLevel;
 	u32 currmask;
 
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 
-
 	/* Number of level of cache*/
 
-	CacheLevel=0U;
+	CacheLevel = 0U;
 	/* Select cache level 0 and D cache in CSSR */
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
@@ -328,10 +323,10 @@ void Xil_DCacheInvalidate(void)
 	Set = 0U;
 
 	/* Invalidate all the cachelines */
-	for (WayIndex =0U; WayIndex < NumWays; WayIndex++) {
-		for (SetIndex =0U; SetIndex < NumSet; SetIndex++) {
+	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
+		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(ISW,C7Reg);
+			mtcpdc(ISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
 		Set = 0U;
@@ -342,14 +337,14 @@ void Xil_DCacheInvalidate(void)
 	dsb();
 
 	/* Select cache level 1 and D cache in CSSR */
-	CacheLevel += (0x00000001U<<1U) ;
-	mtcp(CSSELR_EL1,CacheLevel);
+	CacheLevel += (0x00000001U << 1U);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
 
 	/* Get the cacheline size, way size, index size from csidr */
-		LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
+	LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
 
 	/* Number of Ways */
 	NumWays = (CsidReg & 0x00001FFFU) >> 3U;
@@ -368,7 +363,7 @@ void Xil_DCacheInvalidate(void)
 	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
 		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(ISW,C7Reg);
+			mtcpdc(ISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
 		Set = 0U;
@@ -377,16 +372,16 @@ void Xil_DCacheInvalidate(void)
 	/* Wait for invalidate to complete */
 	dsb();
 
-#if defined (VERSAL_NET)
+#if defined(VERSAL_NET)
 	/* Select cache level 2 and D cache in CSSR */
-	CacheLevel += (0x00000001U<<1U) ;
-	mtcp(CSSELR_EL1,CacheLevel);
+	CacheLevel += (0x00000001U << 1U);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
 
 	/* Get the cacheline size, way size, index size from csidr */
-		LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
+	LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
 
 	/* Number of Ways */
 	NumWays = (CsidReg & 0x00001FFFU) >> 3U;
@@ -405,7 +400,7 @@ void Xil_DCacheInvalidate(void)
 	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
 		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(ISW,C7Reg);
+			mtcpdc(ISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
 		Set = 0U;
@@ -438,19 +433,18 @@ void Xil_DCacheInvalidate(void)
 ****************************************************************************/
 void Xil_DCacheInvalidateLine(INTPTR adr)
 {
-
 	u32 currmask;
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 
 	/* Select cache level 0 and D cache in CSSR */
-	mtcp(CSSELR_EL1,0x0);
-	mtcpdc(CIVAC,(adr & (~0x3F)));
+	mtcp(CSSELR_EL1, 0x0);
+	mtcpdc(CIVAC, (adr & (~0x3F)));
 	/* Wait for invalidate to complete */
 	dsb();
 	/* Select cache level 1 and D cache in CSSR */
-	mtcp(CSSELR_EL1,0x2);
-	mtcpdc(IVAC,(adr & (~0x3F)));
+	mtcp(CSSELR_EL1, 0x2);
+	mtcpdc(IVAC, (adr & (~0x3F)));
 	/* Wait for invalidate to complete */
 	dsb();
 	mtcpsr(currmask);
@@ -476,7 +470,7 @@ void Xil_DCacheInvalidateLine(INTPTR adr)
 *			corruption.
 *
 ****************************************************************************/
-void Xil_DCacheInvalidateRange(INTPTR  adr, INTPTR len)
+void Xil_DCacheInvalidateRange(INTPTR adr, INTPTR len)
 {
 	const INTPTR cacheline = 64U;
 	INTPTR end = adr + len;
@@ -485,10 +479,10 @@ void Xil_DCacheInvalidateRange(INTPTR  adr, INTPTR len)
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 	if (len != 0U) {
 		while (adr < end) {
-			mtcpdc(CIVAC,adr);
+			mtcpdc(CIVAC, adr);
 			adr += cacheline;
-	#if defined (VERSAL_NET)
-	/*
+#if defined(VERSAL_NET)
+			/*
 	 * Note: "NOP" instructions added below is workaround to avoid processor
 	 * halts observed during execution of cache integration test. Issue is
 	 * observed with O2 optimization level, adding 60 NOP instructions between
@@ -499,67 +493,67 @@ void Xil_DCacheInvalidateRange(INTPTR  adr, INTPTR len)
 	 *   - This issue has been observed from IPP_PSXL_0_9_1 release.
 	 * These NOP instruction would be removed, once said issue is resolved.
 	 */
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-			 __asm volatile( "NOP" );
-	#endif
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+			__asm volatile("NOP");
+#endif
 		}
 	}
 	/* Wait for invalidate to complete */
@@ -578,18 +572,17 @@ void Xil_DCacheFlush(void)
 {
 	register u32 CsidReg, C7Reg;
 	u32 LineSize, NumWays;
-	u32 Way, WayIndex,WayAdjust, Set, SetIndex, NumSet, CacheLevel;
+	u32 Way, WayIndex, WayAdjust, Set, SetIndex, NumSet, CacheLevel;
 	u32 currmask;
 
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 
-
 	/* Number of level of cache*/
 
 	CacheLevel = 0U;
 	/* Select cache level 0 and D cache in CSSR */
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
@@ -614,7 +607,7 @@ void Xil_DCacheFlush(void)
 	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
 		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
 		Set = 0U;
@@ -626,13 +619,13 @@ void Xil_DCacheFlush(void)
 
 	/* Select cache level 1 and D cache in CSSR */
 	CacheLevel += (0x00000001U << 1U);
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
 
 	/* Get the cacheline size, way size, index size from csidr */
-		LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
+	LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
 
 	/* Number of Ways */
 	NumWays = (CsidReg & 0x00001FFFU) >> 3U;
@@ -642,20 +635,20 @@ void Xil_DCacheFlush(void)
 	NumSet = (CsidReg >> 13U) & 0x00007FFFU;
 	NumSet += 0x00000001U;
 
-	WayAdjust=clz(NumWays) - (u32)0x0000001FU;
+	WayAdjust = clz(NumWays) - (u32)0x0000001FU;
 
 	Way = 0U;
 	Set = 0U;
 
 	/* Flush all the cachelines */
-	for (WayIndex =0U; WayIndex < NumWays; WayIndex++) {
-		for (SetIndex =0U; SetIndex < NumSet; SetIndex++) {
+	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
+		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
-		Set=0U;
-		Way += (0x00000001U<<WayAdjust);
+		Set = 0U;
+		Way += (0x00000001U << WayAdjust);
 	}
 	/* Wait for Flush to complete */
 	dsb();
@@ -663,13 +656,13 @@ void Xil_DCacheFlush(void)
 #if defined(VERSAL_NET)
 	/* Select cache level 1 and D cache in CSSR */
 	CacheLevel += (0x00000001U << 1U);
-	mtcp(CSSELR_EL1,CacheLevel);
+	mtcp(CSSELR_EL1, CacheLevel);
 	isb();
 
 	CsidReg = mfcp(CCSIDR_EL1);
 
 	/* Get the cacheline size, way size, index size from csidr */
-		LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
+	LineSize = (CsidReg & 0x00000007U) + 0x00000004U;
 
 	/* Number of Ways */
 	NumWays = (CsidReg & 0x00001FFFU) >> 3U;
@@ -679,20 +672,20 @@ void Xil_DCacheFlush(void)
 	NumSet = (CsidReg >> 13U) & 0x00007FFFU;
 	NumSet += 0x00000001U;
 
-	WayAdjust=clz(NumWays) - (u32)0x0000001FU;
+	WayAdjust = clz(NumWays) - (u32)0x0000001FU;
 
 	Way = 0U;
 	Set = 0U;
 
 	/* Flush all the cachelines */
-	for (WayIndex =0U; WayIndex < NumWays; WayIndex++) {
-		for (SetIndex =0U; SetIndex < NumSet; SetIndex++) {
+	for (WayIndex = 0U; WayIndex < NumWays; WayIndex++) {
+		for (SetIndex = 0U; SetIndex < NumSet; SetIndex++) {
 			C7Reg = Way | Set | CacheLevel;
-			mtcpdc(CISW,C7Reg);
+			mtcpdc(CISW, C7Reg);
 			Set += (0x00000001U << LineSize);
 		}
-		Set=0U;
-		Way += (0x00000001U<<WayAdjust);
+		Set = 0U;
+		Way += (0x00000001U << WayAdjust);
 	}
 	/* Wait for Flush to complete */
 	dsb();
@@ -716,19 +709,19 @@ void Xil_DCacheFlush(void)
 * @note		The bottom 6 bits are set to 0, forced by architecture.
 *
 ****************************************************************************/
-void Xil_DCacheFlushLine(INTPTR  adr)
+void Xil_DCacheFlushLine(INTPTR adr)
 {
 	u32 currmask;
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 	/* Select cache level 0 and D cache in CSSR */
-	mtcp(CSSELR_EL1,0x0);
-	mtcpdc(CIVAC,(adr & (~0x3F)));
+	mtcp(CSSELR_EL1, 0x0);
+	mtcpdc(CIVAC, (adr & (~0x3F)));
 	/* Wait for flush to complete */
 	dsb();
 	/* Select cache level 1 and D cache in CSSR */
-	mtcp(CSSELR_EL1,0x2);
-	mtcpdc(CIVAC,(adr & (~0x3F)));
+	mtcp(CSSELR_EL1, 0x2);
+	mtcpdc(CIVAC, (adr & (~0x3F)));
 	/* Wait for flush to complete */
 	dsb();
 	mtcpsr(currmask);
@@ -745,29 +738,29 @@ void Xil_ICacheEnable(void)
 {
 	u32 CtrlReg;
 
-	#if EL3 == 1 
-		CtrlReg = mfcp(SCTLR_EL3);
-	#elif (EL1_NONSECURE == 1) 
-		CtrlReg = mfcp(SCTLR_EL1);
-	#else
-		CtrlReg = 0U;
-	#endif
+#if EL3 == 1
+	CtrlReg = mfcp(SCTLR_EL3);
+#elif (EL1_NONSECURE == 1)
+	CtrlReg = mfcp(SCTLR_EL1);
+#else
+	CtrlReg = 0U;
+#endif
 
 	/* enable caches only if they are disabled */
-	if((CtrlReg & XREG_CONTROL_ICACHE_BIT)==0x00000000U){
+	if ((CtrlReg & XREG_CONTROL_ICACHE_BIT) == 0x00000000U) {
 		/* invalidate the instruction cache */
 		Xil_ICacheInvalidate();
 
 		CtrlReg |= XREG_CONTROL_ICACHE_BIT;
 
-	#if EL3 == 1 
-			/* enable the instruction cache for el3*/
-			mtcp(SCTLR_EL3,CtrlReg);
-	#elif (EL1_NONSECURE == 1) 
-			/* enable the instruction cache for el1*/
-			mtcp(SCTLR_EL1,CtrlReg);
-	#endif
-		}
+#if EL3 == 1
+		/* enable the instruction cache for el3*/
+		mtcp(SCTLR_EL3, CtrlReg);
+#elif (EL1_NONSECURE == 1)
+		/* enable the instruction cache for el1*/
+		mtcp(SCTLR_EL1, CtrlReg);
+#endif
+	}
 }
 
 /****************************************************************************/
@@ -794,13 +787,11 @@ void Xil_ICacheDisable(void)
 
 	if (EL3 == 1) {
 		/* disable the instruction cache */
-		mtcp(SCTLR_EL3,CtrlReg);
+		mtcp(SCTLR_EL3, CtrlReg);
 	} else if (EL1_NONSECURE == 1) {
 		/* disable the instruction cache */
-		mtcp(SCTLR_EL1,CtrlReg);
+		mtcp(SCTLR_EL1, CtrlReg);
 	}
-
-
 }
 
 /****************************************************************************/
@@ -815,7 +806,7 @@ void Xil_ICacheInvalidate(void)
 	unsigned int currmask;
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
-	mtcp(CSSELR_EL1,0x1);
+	mtcp(CSSELR_EL1, 0x1);
 	dsb();
 	/* invalidate the instruction cache */
 	mtcpicall(IALLU);
@@ -837,15 +828,15 @@ void Xil_ICacheInvalidate(void)
 * @note		The bottom 6 bits are set to 0, forced by architecture.
 *
 ****************************************************************************/
-void Xil_ICacheInvalidateLine(INTPTR  adr)
+void Xil_ICacheInvalidateLine(INTPTR adr)
 {
 	u32 currmask;
 	currmask = mfcpsr();
 	mtcpsr(currmask | IRQ_FIQ_MASK);
 
-	mtcp(CSSELR_EL1,0x1);
+	mtcp(CSSELR_EL1, 0x1);
 	/*Invalidate I Cache line*/
-	mtcpic(IVAU,adr & (~0x3F));
+	mtcpic(IVAU, adr & (~0x3F));
 	/* Wait for invalidate to complete */
 	dsb();
 	mtcpsr(currmask);
@@ -864,7 +855,7 @@ void Xil_ICacheInvalidateLine(INTPTR  adr)
 * @return	None.
 *
 ****************************************************************************/
-void Xil_ICacheInvalidateRange(INTPTR  adr, INTPTR len)
+void Xil_ICacheInvalidateRange(INTPTR adr, INTPTR len)
 {
 	const INTPTR cacheline = 64U;
 	INTPTR end;
@@ -880,15 +871,15 @@ void Xil_ICacheInvalidateRange(INTPTR  adr, INTPTR len)
 		tempadr &= ~(cacheline - 0x00000001U);
 
 		/* Select cache Level 0 I-cache in CSSR */
-		mtcp(CSSELR_EL1,0x1);
+		mtcp(CSSELR_EL1, 0x1);
 		while (tempadr < tempend) {
 			/*Invalidate I Cache line*/
-			mtcpic(IVAU,adr & (~0x3F));
+			mtcpic(IVAU, adr & (~0x3F));
 
 			tempadr += cacheline;
 		}
 	}
-/* Wait for invalidate to complete */
+	/* Wait for invalidate to complete */
 	dsb();
 	mtcpsr(currmask);
 }
@@ -906,13 +897,14 @@ void Xil_ICacheInvalidateRange(INTPTR  adr, INTPTR len)
 * @note		This function is implemented only for EL3 privilege level.
 *
 *****************************************************************************/
-void Xil_ConfigureL1Prefetch (u8 num) {
+void Xil_ConfigureL1Prefetch(u8 num)
+{
 #if EL3
-       u64 val=0;
+	u64 val = 0;
 
-       val= mfcp(S3_1_C15_C2_0 );
-       val &= ~(L1_DATA_PREFETCH_CONTROL_MASK);
-       val |=  (num << L1_DATA_PREFETCH_CONTROL_SHIFT);
-       mtcp(S3_1_C15_C2_0,val);
+	val = mfcp(S3_1_C15_C2_0);
+	val &= ~(L1_DATA_PREFETCH_CONTROL_MASK);
+	val |= (num << L1_DATA_PREFETCH_CONTROL_SHIFT);
+	mtcp(S3_1_C15_C2_0, val);
 #endif
 }

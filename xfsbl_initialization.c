@@ -81,10 +81,10 @@
 /************************** Function Prototypes ******************************/
 static u32 XFsbl_ProcessorInit(XFsblPs *FsblInstancePtr);
 static u32 XFsbl_ResetValidation(void);
-static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr);
-static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr);
-static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr);
-static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr);
+static u32 XFsbl_SystemInit(XFsblPs *const FsblInstancePtr);
+static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *const FsblInstancePtr);
+static u32 retrieveImageHeaderTable(XFsblPs *const FsblInstancePtr);
+static u32 retrieveBootHeader(XFsblPs *const FsblInstancePtr);
 #ifdef XFSBL_SECURE
 static u32 XFsbl_ValidateHeader(XFsblPs *FsblInstancePtr);
 #endif
@@ -209,7 +209,7 @@ static u32 XFsbl_GetResetReason(void)
  * 			- returns XFSBL_SUCCESS on success
  *
  *****************************************************************************/
-u32 XFsbl_Initialize(XFsblPs *FsblInstancePtr)
+u32 XFsbl_Initialize(XFsblPs *const FsblInstancePtr)
 {
 	u32 Status;
 
@@ -306,7 +306,7 @@ END:
  * @return	returns the error codes described in xfsbl_error.h on any error
  * 			returns XFSBL_SUCCESS on success
  ******************************************************************************/
-u32 XFsbl_BootDeviceInit(XFsblPs *FsblInstancePtr)
+u32 XFsbl_BootDeviceInit(XFsblPs *const FsblInstancePtr)
 {
 	u32 Status;
 
@@ -512,7 +512,7 @@ static u32 XFsbl_ResetValidation(void)
  * 			returns XFSBL_SUCCESS on success
  *
  ******************************************************************************/
-static u32 XFsbl_SystemInit(XFsblPs *FsblInstancePtr)
+static u32 XFsbl_SystemInit(XFsblPs *const FsblInstancePtr)
 {
 	u32 Status;
 
@@ -612,7 +612,7 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *
  ******************************************************************************/
-static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
+static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *const FsblInstancePtr)
 {
 	u32 Status;
 	u32 BootMode;
@@ -624,16 +624,6 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
 		   CRL_APB_BOOT_MODE_USER_BOOT_MODE_MASK;
 
 	FsblInstancePtr->PrimaryBootDevice = BootMode;
-
-/**
- * If FSBL_PARTITION_LOAD_EXCLUDE macro is defined,then the partition loading
- * will be skipped and irrespective of the actual boot device,FSBL will run the
- * way it runs in JTAG boot mode
- */
-#ifdef FSBL_PARTITION_LOAD_EXCLUDE
-	FsblInstancePtr->PrimaryBootDevice = XFSBL_JTAG_BOOT_MODE;
-	Status = XFSBL_STATUS_JTAG;
-#else
 
 	switch (BootMode) {
 	/**
@@ -719,7 +709,7 @@ static u32 XFsbl_PrimaryBootDeviceInit(XFsblPs *FsblInstancePtr)
 		Status = XFSBL_ERROR_UNSUPPORTED_BOOT_MODE;
 	} break;
 	}
-#endif
+
 	/**
 	 * In case of error or Jtag boot, goto end
 	 */
@@ -739,7 +729,7 @@ END:
 	return Status;
 }
 
-static u32 retrieveBootHeader(XFsblPs *FsblInstancePtr)
+static u32 retrieveBootHeader(XFsblPs *const FsblInstancePtr)
 {
 	u32 FlashImageOffsetAddress;
 	u32 Status;
@@ -792,7 +782,7 @@ END:
 	return Status;
 }
 
-static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr)
+static u32 retrieveImageHeaderTable(XFsblPs *const FsblInstancePtr)
 {
 	u32 Status;
 	u32 ImageHeaderTableAddressOffset = 0U;
@@ -819,8 +809,6 @@ static u32 retrieveImageHeaderTable(XFsblPs *FsblInstancePtr)
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
-
-	xil_printf("*** reTrieveIHT Status %d *** \n\r", Status);
 
 END:
 	return Status;

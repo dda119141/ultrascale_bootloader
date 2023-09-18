@@ -9,9 +9,9 @@ _STACK_SIZE = DEFINED(_STACK_SIZE) ? _STACK_SIZE : 0x2000;
 /* Define Memories in the system */
 MEMORY
 {
-   psu_ocm_ram_0_S_AXI_BASEADDR : ORIGIN = 0xFFFC0000, LENGTH = 0x00029E00
-   psu_ocm_ram_1_S_AXI_BASEADDR : ORIGIN = 0xFFFE9E00, LENGTH = 0x00000200
-   psu_ocm_ram_2_S_AXI_BASEADDR : ORIGIN = 0xFFFF0040, LENGTH = 0x0000FDC0
+   psu_ocm_ram_0_S_AXI_BASEADDR (rx) : ORIGIN = 0xFFFC0000, LENGTH = 0x00032000
+   psu_ocm_ram_1_S_AXI_BASEADDR (rx): ORIGIN = 0xFFFF2000, LENGTH = 0x00000200
+   psu_ocm_ram_2_S_AXI_BASEADDR (rwx): ORIGIN = 0xFFFC0200, LENGTH = 0x0003FE00
 }
 
 /* Specify the default entry point to the program */
@@ -25,24 +25,14 @@ SECTIONS
    *(.boot)
    *(.text)
    *(.text.*)
-   *(.rodata)
-   *(.data)
-   *(.bss)
-   *(.stack)
-} > psu_ocm_ram_0_S_AXI_BASEADDR
-
-.rodata (ALIGN(64)): {
-   __rodata_start = .;
-   *(.rodata)
-   *(.rodata.*)
-   __rodata_end = .;
+   *(.rodata*)
 } > psu_ocm_ram_0_S_AXI_BASEADDR
 
 .data (ALIGN(64)): {
    __data_start = .;
    *(.data)
    __data_end = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
+} > psu_ocm_ram_2_S_AXI_BASEADDR
 
 .bss (NOLOAD) : {
    . = ALIGN(64);
@@ -52,15 +42,16 @@ SECTIONS
    . = ALIGN(64);
    __bss_end__ = .;
 /*   __bss_size = __bss_end - __bss_start; */
-} > psu_ocm_ram_0_S_AXI_BASEADDR
+} > psu_ocm_ram_2_S_AXI_BASEADDR
 
 /* Generate Stack definitions */
 .stack (NOLOAD) : {
    . = ALIGN(64);
    _el3_stack_end = .;
    . += _STACK_SIZE;
+   . = ALIGN(64);
    __el3_stack = .;
-} > psu_ocm_ram_0_S_AXI_BASEADDR
+} > psu_ocm_ram_2_S_AXI_BASEADDR
 
 .handoff_params (NOLOAD) : {
    . = ALIGN(512);
@@ -72,7 +63,7 @@ SECTIONS
    . += 0x0;
    _heap_end = .;
    . = ALIGN(4);
-} > psu_ocm_ram_1_S_AXI_BASEADDR
+} > psu_ocm_ram_2_S_AXI_BASEADDR
 
 
 /*

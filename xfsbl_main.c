@@ -1,7 +1,3 @@
-/******************************************************************************
- * Copyright (c) 2015 - 2021 Xilinx, Inc.  All rights reserved.
- * SPDX-License-Identifier: MIT
- ******************************************************************************/
 
 /*****************************************************************************/
 /**
@@ -76,7 +72,8 @@ int main(void)
 	while (FsblStage <= XFSBL_STAGE_DEFAULT) {
 		switch (FsblStage) {
 		case SYSTEM_INIT: {
-			XFsbl_Printf(DEBUG_INFO, "====enter system init \n ");
+			XFsbl_Printf(DEBUG_GENERAL,
+				     "====enter system init \n ");
 			FsblStatus = XFsbl_Initialize(&FsblInstance);
 
 			if (XFSBL_SUCCESS != FsblStatus) {
@@ -93,7 +90,7 @@ int main(void)
 		} break;
 
 		case SYSTEM_PRIMARY_BOOT_DEVICE_INIT: {
-			XFsbl_Printf(DEBUG_INFO,
+			XFsbl_Printf(DEBUG_GENERAL,
 				     "====enter Primary boot device init "
 				     "=== \n\r");
 
@@ -103,8 +100,6 @@ int main(void)
        		*/
 			FsblStatus = XFsbl_BootDeviceInit(&FsblInstance);
 
-			//			FsblStage = XFSBL_STAGE_DEFAULT;
-			//			break;
 			switch (FsblStatus) {
 			case XFSBL_STATUS_JTAG: {
 				/*
@@ -123,7 +118,7 @@ int main(void)
 				FsblStage = XFSBL_HANDOFF;
 			} break;
 			case XFSBL_SUCCESS: {
-				XFsbl_Printf(DEBUG_INFO,
+				XFsbl_Printf(DEBUG_GENERAL,
 					     "Boot Device Init Success \n\r");
 
 				/**
@@ -150,8 +145,8 @@ int main(void)
 				FsblStage = XFSBL_STAGE_ERR;
 			} break;
 			}
-			break;
-		}
+
+		} break;
 
 		case XFSBL_PARTITION_LOAD: {
 			XFsbl_Printf(DEBUG_INFO,
@@ -188,7 +183,7 @@ int main(void)
 				     1U)) {
 					PartitionNum++;
 				} else {
-					XFsbl_Printf(DEBUG_INFO,
+					XFsbl_Printf(DEBUG_GENERAL,
 						     "All Partitions "
 						     "Loaded \n\r");
 
@@ -199,7 +194,7 @@ int main(void)
 		} break;
 
 		case XFSBL_HANDOFF: {
-			XFsbl_Printf(DEBUG_INFO, "==== HandOFF=== \n\r");
+			XFsbl_Printf(DEBUG_GENERAL, "==== HandOFF=== \n\r");
 
 			/**
        * Handoff to the applications
