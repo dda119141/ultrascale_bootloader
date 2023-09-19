@@ -77,10 +77,8 @@ int main(void)
 			FsblStatus = XFsbl_Initialize(&FsblInstance);
 
 			if (XFSBL_SUCCESS != FsblStatus) {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "hardware platform "
-					     "Initialization failed 0x%0lx\n\r",
-					     FsblStatus);
+				FsblInstance.ErrorCode =
+					SYSTEM_INITIALIZATION_FAILED;
 				FsblStatus += XFSBL_ERROR_STAGE_1;
 				FsblStage = XFSBL_STAGE_ERR;
 
@@ -127,20 +125,12 @@ int main(void)
     		     */
 				PartitionNum = 0x1U;
 
-				/* Clear RPU status register */
-				Xil_Out32(XFSBL_R5_USAGE_STATUS_REG,
-					  (Xil_In32(XFSBL_R5_USAGE_STATUS_REG) &
-					   ~(XFSBL_R5_0_STATUS_MASK |
-					     XFSBL_R5_1_STATUS_MASK)));
-
 				FsblStage = XFSBL_PARTITION_LOAD;
 
 			} break;
 			default: {
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Boot Device "
-					     "Initialization failed 0x%0lx\n\r",
-					     FsblStatus);
+				FsblInstance.ErrorCode =
+					SYSTEM_PRIMARY_BOOT_DEVICE_INITIALIZATION_FAILED;
 				FsblStatus += XFSBL_ERROR_STAGE_2;
 				FsblStage = XFSBL_STAGE_ERR;
 			} break;
@@ -163,20 +153,12 @@ int main(void)
 			FsblStatus = XFsbl_PartitionLoad(&FsblInstance,
 							 PartitionNum);
 			if (XFSBL_SUCCESS != FsblStatus) {
-				/**
-        		 * Error
-         		*/
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Partition %d Load "
-					     "Failed, 0x%0lx\n\r",
-					     PartitionNum, FsblStatus);
+				FsblInstance.ErrorCode =
+					SYSTEM_PARTITION_LOADING_FAILED;
+
 				FsblStatus += XFSBL_ERROR_STAGE_3;
 				FsblStage = XFSBL_STAGE_ERR;
 			} else {
-				XFsbl_Printf(DEBUG_INFO,
-					     "Partition %d Load Success \n\r",
-					     PartitionNum);
-
 				if (PartitionNum <
 				    (FsblInstance.ImageHeader.ImageHeaderTable
 					     .NoOfPartitions -
@@ -225,12 +207,7 @@ int main(void)
 					     "applications, if present \n\r");
 				EarlyHandoff = FALSE;
 			} else if (XFSBL_SUCCESS != FsblStatus) {
-				/**
-         * Error
-         */
-				XFsbl_Printf(DEBUG_GENERAL,
-					     "Handoff Failed 0x%0lx\n\r",
-					     FsblStatus);
+				FsblInstance.ErrorCode = SYSTEM_HANDOFF_FAILED;
 				FsblStatus += XFSBL_ERROR_HANDOFF;
 				FsblStage = XFSBL_STAGE_ERR;
 			} else {

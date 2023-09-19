@@ -28,7 +28,10 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 			-DARMA53_64
 			-D__aarch64__
 		 	-Wall -Werror -g 
-			-flto -ffat-lto-objects
+			-ffunction-sections
+			-fdata-sections
+#			-flto -ffat-lto-objects
+#			-nostdlib
 			 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE 
@@ -51,7 +54,7 @@ target_link_options(${PROJECT_NAME} PRIVATE
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
  LINK_DEPENDS "${LINKER_SCRIPT}"
- LINK_FLAGS "-DARMA53_64 -MMD -MP -Wall -fmessage-length=0 -Os -flto -ffat-lto-objects"
+ LINK_FLAGS "-fmessage-length=0 "
  ) 
 
 add_subdirectory(lib/common)
