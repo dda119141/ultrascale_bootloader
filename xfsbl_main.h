@@ -93,11 +93,6 @@ typedef struct {
  * ERROR Code Definitions - Main State Chart
 */
 
-#define SYSTEM_INITIALIZATION_FAILED (0x1U)
-#define SYSTEM_PRIMARY_BOOT_DEVICE_INITIALIZATION_FAILED (0x2U)
-#define SYSTEM_PARTITION_LOADING_FAILED (0x3U)
-#define SYSTEM_HANDOFF_FAILED (0x4U)
-
 /* SDK release version */
 #define SDK_RELEASE_YEAR 2022
 #define SDK_RELEASE_QUARTER 2

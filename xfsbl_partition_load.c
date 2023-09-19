@@ -100,23 +100,11 @@ static void XFsbl_SetBSSecureState(u32 State);
 #ifdef XFSBL_ENABLE_DDR_SR
 static void XFsbl_PollForDDRReady(void);
 #endif
-#ifdef ARMR5
-static void XFsbl_SetR5ExcepVectorHiVec(void);
-static void XFsbl_SetR5ExcepVectorLoVec(void);
-#endif
 #ifdef XFSBL_TPM
 static u8 XFsbl_GetPcrIndex(const XFsblPs *FsblInstancePtr, u32 PartitionNum);
 #endif
 
 /************************** Variable Definitions *****************************/
-#ifdef ARMR5
-u8 R5LovecBuffer[32] = { 0U };
-u8 R5HivecBuffer[32] = { 0U };
-u32 TcmSkipLength = 0U;
-PTRSIZE TcmSkipAddress = 0U;
-u8 IsR5IvtBackup = FALSE;
-#endif
-
 #ifdef XFSBL_SECURE
 u32 Iv[XIH_BH_IV_LENGTH / 4U] = { 0 };
 u8 AuthBuffer[XFSBL_AUTH_BUFFER_SIZE] __attribute__((aligned(4))) = { 0 };
@@ -150,9 +138,6 @@ extern u8 ReadBuffer[READ_BUFFER_SIZE];
 u32 XFsbl_PartitionLoad(XFsblPs *const FsblInstancePtr, u32 PartitionNum)
 {
 	u32 Status;
-#ifdef ARMR5
-	u32 Index;
-#endif
 
 #ifdef XFSBL_WDT_PRESENT
 	if (XFSBL_MASTER_ONLY_RESET != FsblInstancePtr->ResetReason) {
@@ -801,84 +786,5 @@ static void XFsbl_PollForDDRReady(void)
 			XFsbl_MarkDdrAsReserved(FALSE);
 		}
 	}
-}
-#endif
-
-#ifdef ARMR5
-
-/*****************************************************************************/
-/**
- * This function set the vector bit of SCTLR.
- * It will configure R5,so that R5 will jump to
- * HIVEC when exception arise.
- *
- * @param	None
- *
- * @return	None
- *
- *****************************************************************************/
-
-static void XFsbl_SetR5ExcepVectorHiVec(void)
-{
-	u32 RegVal;
-	RegVal = mfcp(XREG_CP15_SYS_CONTROL);
-	RegVal |= XFSBL_SET_R5_SCTLR_VECTOR_BIT;
-	mtcp(XREG_CP15_SYS_CONTROL, RegVal);
-}
-
-/*****************************************************************************/
-/**
- * This function reset the vector bit of SCTLR.
- * It will configure R5,so that R5 will jump to
- * LOVEC when exception arise.
- *
- * @param	None
- *
- * @return	None
- *
- *****************************************************************************/
-
-static void XFsbl_SetR5ExcepVectorLoVec(void)
-{
-	u32 RegVal;
-	RegVal = mfcp(XREG_CP15_SYS_CONTROL);
-	RegVal &= (~(XFSBL_SET_R5_SCTLR_VECTOR_BIT));
-	mtcp(XREG_CP15_SYS_CONTROL, RegVal);
-}
-
-#endif
-#ifdef XFSBL_TPM
-/*****************************************************************************/
-/**
- * This function returns PCR index of the partition. Its 6 for PL,
- * 2 for ATF and 3 for U-boot.
- *
- * @param	FsblInstancePtr is pointer to the XFsbl Instance
- * @param	PartitionNum is the partition number to measure
- *
- * @return	PcrIndex
- *
- *****************************************************************************/
-static u8 XFsbl_GetPcrIndex(const XFsblPs *FsblInstancePtr, u32 PartitionNum)
-{
-	u8 PcrIndex = 0U;
-	const XFsblPs_PartitionHeader *PartitionHeader =
-		&FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
-	u32 DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
-	u32 PartitionAttributes = PartitionHeader->PartitionAttributes;
-	u32 DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
-	u32 ElFlag = PartitionAttributes & XIH_PH_ATTRB_TARGET_EL_MASK;
-
-	if (DestinationDevice == XIH_PH_ATTRB_DEST_DEVICE_PL) {
-		PcrIndex = XFSBL_TPM_PL_PCR_INDEX;
-	} else if (DestinationCpu == XIH_PH_ATTRB_DEST_CPU_A53_0) {
-		if (ElFlag == XFSBL_EL3_VAL) {
-			PcrIndex = XFSBL_TPM_ATF_PCR_INDEX;
-		} else if (ElFlag == XFSBL_EL2_VAL) {
-			PcrIndex = XFSBL_TPM_UBOOT_PCR_INDEX;
-		}
-	}
-
-	return PcrIndex;
 }
 #endif

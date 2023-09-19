@@ -314,7 +314,7 @@ u32 XFsbl_BootDeviceInit(XFsblPs *const FsblInstancePtr)
 	 * Configure the primary boot device
 	 */
 	Status = XFsbl_PrimaryBootDeviceInit(FsblInstancePtr);
-	XFsbl_Printf(DEBUG_GENERAL, "Primary device status 0x%0lx\n\r", Status);
+	XFsbl_Printf(DEBUG_INFO, "Primary device status 0x%0lx\n\r", Status);
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}
@@ -323,8 +323,7 @@ u32 XFsbl_BootDeviceInit(XFsblPs *const FsblInstancePtr)
       * Retrieve Boot header
       */
 	Status = retrieveBootHeader(FsblInstancePtr);
-	XFsbl_Printf(DEBUG_GENERAL, "retrieve header status 0x%0lx\n\r",
-		     Status);
+	XFsbl_Printf(DEBUG_INFO, "retrieve header status 0x%0lx\n\r", Status);
 	if (XFSBL_SUCCESS != Status) {
 		goto END;
 	}

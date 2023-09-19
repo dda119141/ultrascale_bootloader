@@ -77,9 +77,7 @@ int main(void)
 			FsblStatus = XFsbl_Initialize(&FsblInstance);
 
 			if (XFSBL_SUCCESS != FsblStatus) {
-				FsblInstance.ErrorCode =
-					SYSTEM_INITIALIZATION_FAILED;
-				FsblStatus += XFSBL_ERROR_STAGE_1;
+				FsblStatus += XFSBL_ERROR_STAGE_1_INIT_FAILED;
 				FsblStage = XFSBL_STAGE_ERR;
 
 			} else {
@@ -129,9 +127,8 @@ int main(void)
 
 			} break;
 			default: {
-				FsblInstance.ErrorCode =
-					SYSTEM_PRIMARY_BOOT_DEVICE_INITIALIZATION_FAILED;
-				FsblStatus += XFSBL_ERROR_STAGE_2;
+				FsblStatus +=
+					XFSBL_ERROR_STAGE_2_BOOTDEVICE_INIT_FAILED;
 				FsblStage = XFSBL_STAGE_ERR;
 			} break;
 			}
@@ -153,10 +150,8 @@ int main(void)
 			FsblStatus = XFsbl_PartitionLoad(&FsblInstance,
 							 PartitionNum);
 			if (XFSBL_SUCCESS != FsblStatus) {
-				FsblInstance.ErrorCode =
-					SYSTEM_PARTITION_LOADING_FAILED;
-
-				FsblStatus += XFSBL_ERROR_STAGE_3;
+				FsblStatus +=
+					XFSBL_ERROR_STAGE_3_PARTITION_LOAD_FAILED;
 				FsblStage = XFSBL_STAGE_ERR;
 			} else {
 				if (PartitionNum <
@@ -207,8 +202,7 @@ int main(void)
 					     "applications, if present \n\r");
 				EarlyHandoff = FALSE;
 			} else if (XFSBL_SUCCESS != FsblStatus) {
-				FsblInstance.ErrorCode = SYSTEM_HANDOFF_FAILED;
-				FsblStatus += XFSBL_ERROR_HANDOFF;
+				FsblStatus += XFSBL_ERROR_HANDOFF_FAILED;
 				FsblStage = XFSBL_STAGE_ERR;
 			} else {
 				/**

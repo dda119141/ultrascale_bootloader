@@ -501,8 +501,8 @@ static u32 XFsbl_SetCpuPwrSettings(u32 CpuSettings, u32 Flags)
 
 		default:
 			XFsbl_Printf(DEBUG_GENERAL,
-				     "XFSBL_ERROR_HANDOFF_CPUID\n\r");
-			Status = XFSBL_ERROR_HANDOFF_CPUID;
+				     "XFSBL_ERROR_HANDOFF_FAILED_CPUID\n\r");
+			Status = XFSBL_ERROR_HANDOFF_FAILED_CPUID;
 			break;
 		}
 

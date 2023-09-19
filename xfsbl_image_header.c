@@ -319,7 +319,6 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader *ImageHeader,
 			(PTRSIZE) & (ImageHeader->ImageHeaderTable),
 			XIH_IHT_LEN);
 
-		xil_printf("*%s Copy Status %d *** \n\r", Status);
 		if (XFSBL_SUCCESS != Status) {
 			XFsbl_Printf(DEBUG_GENERAL, "Device Copy Failed \n\r");
 			goto END;
