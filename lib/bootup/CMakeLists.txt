@@ -22,7 +22,7 @@ target_sources(xil PUBLIC
 	xplatform_info.c
 	sleep.c
 	vectors.c
-	sbrk.c
+#	sbrk.c
 	time.c
 	lseek.c
 	xtime_l.c
