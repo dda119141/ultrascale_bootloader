@@ -8,7 +8,6 @@ target_sources(uartps PUBLIC
 	xuartps_hw.c
 	xuartps_intr.c
 	xuartps_options.c
-	xuartps_selftest.c
 	xuartps_sinit.c
 	)
 
