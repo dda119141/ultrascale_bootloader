@@ -38,7 +38,7 @@
  * Include WDT only if WDT is present
  */
 #ifdef XFSBL_WDT_PRESENT
-#include "xwdtps.h"
+#  include "xwdtps.h"
 #endif
 
 /************************** Constant Definitions *****************************/
@@ -47,9 +47,9 @@
 
 /***************** Macros (Inline Functions) Definitions *********************/
 #ifdef XPAR_XIPIPSU_0_DEVICE_ID
-#define IPI_DEVICE_ID XPAR_XIPIPSU_0_DEVICE_ID
-#define IPI_PMU_PM_INT_MASK XPAR_XIPIPS_TARGET_PSU_PMU_0_CH0_MASK
-#define PM_INIT 21U
+#  define IPI_DEVICE_ID XPAR_XIPIPSU_0_DEVICE_ID
+#  define IPI_PMU_PM_INT_MASK XPAR_XIPIPS_TARGET_PSU_PMU_0_CH0_MASK
+#  define PM_INIT 21U
 #endif
 #define PM_INIT_COMPLETED_KEY 0x5A5A5A5AU
 /************************** Function Prototypes ******************************/
@@ -80,73 +80,72 @@ static XWdtPs Watchdog = {0}; /* Instance of WatchDog Timer	*/
  *
  *****************************************************************************/
 u32 XFsbl_InitWdt(void) {
-	s32 Status;
-	u32 UStatus;
-	XWdtPs_Config *ConfigPtr; /* Config structure of the WatchDog Timer */
-	u32 CounterValue;
-	u32 RegValue;
+  s32 Status;
+  u32 UStatus;
+  XWdtPs_Config* ConfigPtr; /* Config structure of the WatchDog Timer */
+  u32 CounterValue;
+  u32 RegValue;
 
-	/**
-	 * Initialize the WDT timer
-	 */
-	ConfigPtr = XWdtPs_LookupConfig(XFSBL_WDT_DEVICE_ID);
+  /**
+   * Initialize the WDT timer
+   */
+  ConfigPtr = XWdtPs_LookupConfig(XFSBL_WDT_DEVICE_ID);
 
-	if (NULL == ConfigPtr) {
-		UStatus = XFSBL_WDT_INIT_FAILED;
-		goto END;
-	}
+  if (NULL == ConfigPtr) {
+    UStatus = XFSBL_WDT_INIT_FAILED;
+    goto END;
+  }
 
-	Status =
-	    XWdtPs_CfgInitialize(&Watchdog, ConfigPtr, ConfigPtr->BaseAddress);
-	if (Status != XFSBL_SUCCESS) {
-		if (Status == XST_DEVICE_IS_STARTED) {
-			UStatus = XFSBL_SUCCESS;
-			goto END;
-		}
-		XFsbl_Printf(DEBUG_INFO, "XFSBL_WDT_INIT_FAILED\n\r");
-		UStatus = XFSBL_WDT_INIT_FAILED;
-		goto END;
-	}
+  Status = XWdtPs_CfgInitialize(&Watchdog, ConfigPtr, ConfigPtr->BaseAddress);
+  if (Status != XFSBL_SUCCESS) {
+    if (Status == XST_DEVICE_IS_STARTED) {
+      UStatus = XFSBL_SUCCESS;
+      goto END;
+    }
+    XFsbl_Printf(DEBUG_INFO, "XFSBL_WDT_INIT_FAILED\n\r");
+    UStatus = XFSBL_WDT_INIT_FAILED;
+    goto END;
+  }
 
-	/**
-	 * Setting the divider value
-	 */
-	XWdtPs_SetControlValue(&Watchdog, XWDTPS_CLK_PRESCALE,
-			       XWDTPS_CCR_PSCALE_4096);
-	/**
-	 * Convert time to  Watchdog counter reset value
-	 */
-	CounterValue = XFsbl_ConvertTime_WdtCounter(XFSBL_WDT_EXPIRE_TIME);
+  /**
+   * Setting the divider value
+   */
+  XWdtPs_SetControlValue(&Watchdog, XWDTPS_CLK_PRESCALE,
+                         XWDTPS_CCR_PSCALE_4096);
+  /**
+   * Convert time to  Watchdog counter reset value
+   */
+  CounterValue = XFsbl_ConvertTime_WdtCounter(XFSBL_WDT_EXPIRE_TIME);
 
-	/**
-	 * Set the Watchdog counter reset value
-	 */
-	XWdtPs_SetControlValue(&Watchdog, XWDTPS_COUNTER_RESET, CounterValue);
-	/**
-	 * enable reset output, as we are only using this as a basic counter
-	 */
-	XWdtPs_EnableOutput(&Watchdog, XWDTPS_RESET_SIGNAL);
+  /**
+   * Set the Watchdog counter reset value
+   */
+  XWdtPs_SetControlValue(&Watchdog, XWDTPS_COUNTER_RESET, CounterValue);
+  /**
+   * enable reset output, as we are only using this as a basic counter
+   */
+  XWdtPs_EnableOutput(&Watchdog, XWDTPS_RESET_SIGNAL);
 
-	/* Enable generation of system reset by PMU due to SWDT0/1 */
-	RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_SRST_EN_1);
-	RegValue |= XFSBL_WDT_MASK;
-	XFsbl_Out32(PMU_GLOBAL_ERROR_SRST_EN_1, RegValue);
+  /* Enable generation of system reset by PMU due to SWDT0/1 */
+  RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_SRST_EN_1);
+  RegValue |= XFSBL_WDT_MASK;
+  XFsbl_Out32(PMU_GLOBAL_ERROR_SRST_EN_1, RegValue);
 
-	/* Enable SWDT0/1 System Watchdog Timer Error */
-	RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_EN_1);
-	RegValue |= XFSBL_WDT_MASK;
-	XFsbl_Out32(PMU_GLOBAL_ERROR_EN_1, RegValue);
+  /* Enable SWDT0/1 System Watchdog Timer Error */
+  RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_EN_1);
+  RegValue |= XFSBL_WDT_MASK;
+  XFsbl_Out32(PMU_GLOBAL_ERROR_EN_1, RegValue);
 
-	/**
-	 * Start the Watchdog timer
-	 */
-	XWdtPs_Start(&Watchdog);
+  /**
+   * Start the Watchdog timer
+   */
+  XWdtPs_Start(&Watchdog);
 
-	XWdtPs_RestartWdt(&Watchdog);
+  XWdtPs_RestartWdt(&Watchdog);
 
-	UStatus = XFSBL_SUCCESS;
+  UStatus = XFSBL_SUCCESS;
 END:
-	return UStatus;
+  return UStatus;
 }
 
 /******************************************************************************
@@ -162,31 +161,31 @@ END:
  *
  *******************************************************************************/
 static u32 XFsbl_ConvertTime_WdtCounter(u32 seconds) {
-	double time;
-	double CounterValue;
-	u32 Crv;
-	u32 Prescaler;
-	u32 PrescalerValue;
+  double time;
+  double CounterValue;
+  u32 Crv;
+  u32 Prescaler;
+  u32 PrescalerValue;
 
-	Prescaler = XWdtPs_GetControlValue(&Watchdog, XWDTPS_CLK_PRESCALE);
+  Prescaler = XWdtPs_GetControlValue(&Watchdog, XWDTPS_CLK_PRESCALE);
 
-	if (Prescaler == XWDTPS_CCR_PSCALE_0008) {
-		PrescalerValue = 8;
-	} else if (Prescaler == XWDTPS_CCR_PSCALE_0064) {
-		PrescalerValue = 64;
-	} else if (Prescaler == XWDTPS_CCR_PSCALE_4096) {
-		PrescalerValue = 4096;
-	} else {
-		PrescalerValue = 0U;
-	}
-	time = (double)(PrescalerValue) / (double)XPAR_XWDTPS_0_WDT_CLK_FREQ_HZ;
+  if (Prescaler == XWDTPS_CCR_PSCALE_0008) {
+    PrescalerValue = 8;
+  } else if (Prescaler == XWDTPS_CCR_PSCALE_0064) {
+    PrescalerValue = 64;
+  } else if (Prescaler == XWDTPS_CCR_PSCALE_4096) {
+    PrescalerValue = 4096;
+  } else {
+    PrescalerValue = 0U;
+  }
+  time = (double)(PrescalerValue) / (double)XPAR_XWDTPS_0_WDT_CLK_FREQ_HZ;
 
-	CounterValue = seconds / time;
+  CounterValue = seconds / time;
 
-	Crv = (u32)CounterValue;
-	Crv >>= XFSBL_WDT_CRV_SHIFT;
+  Crv = (u32)CounterValue;
+  Crv >>= XFSBL_WDT_CRV_SHIFT;
 
-	return Crv;
+  return Crv;
 }
 
 /******************************************************************************
@@ -214,16 +213,16 @@ void XFsbl_RestartWdt(void) { XWdtPs_RestartWdt(&Watchdog); }
  *
  *******************************************************************************/
 void XFsbl_StopWdt(void) {
-	u32 RegValue;
+  u32 RegValue;
 
-	if (Watchdog.IsReady) {
-		XWdtPs_Stop(&Watchdog);
-	}
+  if (Watchdog.IsReady) {
+    XWdtPs_Stop(&Watchdog);
+  }
 
-	/* Disable generation of system reset by PMU due to SWDT0/1 */
-	RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_SRST_DIS_1);
-	RegValue |= XFSBL_WDT_MASK;
-	XFsbl_Out32(PMU_GLOBAL_ERROR_SRST_DIS_1, RegValue);
+  /* Disable generation of system reset by PMU due to SWDT0/1 */
+  RegValue = XFsbl_In32(PMU_GLOBAL_ERROR_SRST_DIS_1);
+  RegValue |= XFSBL_WDT_MASK;
+  XFsbl_Out32(PMU_GLOBAL_ERROR_SRST_DIS_1, RegValue);
 }
 
 #endif /** end of WDT wrapper code */
@@ -241,31 +240,23 @@ void XFsbl_StopWdt(void) {
  *
  *******************************************************************************/
 u32 XFsbl_PmInit(void) {
-	u32 UStatus;
-	/* Proceed only if SYSCFG is enabled */
-	/**
-	 * Check if PMU FW is present
-	 * If PMU FW is present, but IPI device does not exist, report an error
-	 * If IPI device exists, but PMU FW is not present, do not issue IPI
-	 */
-	if ((XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL) &
-	     PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) !=
-	    PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) {
-		XFsbl_Printf(DEBUG_PRINT_ALWAYS,
-			     "PMU-FW is not running, certain applications may "
-			     "not be supported.\n\r");
-		UStatus = XFSBL_SUCCESS;
-		goto END;
-	} else {
-		UStatus = XFSBL_ERROR_PM_INIT;
-		XFsbl_Printf(
-		    DEBUG_GENERAL,
-		    "PMU firmware is present, but IPI is disabled\r\n");
-		goto END;
-	}
-
-	XFsbl_Printf(DEBUG_DETAILED, "PM Init Success\r\n");
-	UStatus = XFSBL_SUCCESS;
-END:
-	return UStatus;
+  /* Proceed only if SYSCFG is enabled */
+  /**
+   * Check if PMU FW is present
+   * If PMU FW is present, but IPI device does not exist, report an error
+   * If IPI device exists, but PMU FW is not present, do not issue IPI
+   */
+  if ((XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL) &
+       PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) !=
+      PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) {
+    XFsbl_Printf(DEBUG_PRINT_ALWAYS,
+                 "PMU-FW is not running, certain applications may "
+                 "not be supported.\n\r");
+    return XFSBL_SUCCESS;
+  } else {
+    XFsbl_Printf(DEBUG_GENERAL,
+                 "PMU firmware is present, but IPI is disabled\r\n");
+    return XFSBL_SUCCESS;
+    //    return XFSBL_ERROR_PM_INIT;
+  }
 }

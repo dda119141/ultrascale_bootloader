@@ -50,8 +50,8 @@ extern "C" {
  * This stores the handoff Address of the different cpu's
  */
 typedef struct {
-	u32 CpuSettings;
-	u64 HandoffAddress;
+  u32 CpuSettings;
+  u64 HandoffAddress;
 } XFsblPs_HandoffValues;
 
 #if defined XFSBL_PERF
@@ -59,7 +59,7 @@ typedef struct {
  * This stores the timer values for measuring FSBL execution time.
  */
 typedef struct {
-	XTime tFsblStart;
+  XTime tFsblStart;
 } XFsblPs_Perf;
 #endif /* XFSBL_PERF */
 
@@ -68,30 +68,30 @@ typedef struct {
  * required for FSBL
  */
 typedef struct {
-	u32 Version; /**< FSBL Version */
-	u32 PresentStage; /**< Stage */
-	u32 ProcessorID; /**< One of R5-0, R5-LS, A53-0 */
-	u32 A53ExecState; /**< One of A53 64-bit, A53 32-bit */
-	u32 BootHdrAttributes; /**< Boot Header attributes */
-	u32 AuthEnabled; /**< Check if RSA_EN is programmed or
-                                         Boot Header authentication is enabled */
-	u32 ImageOffsetAddress; /**< Flash offset address */
-	XFsblPs_ImageHeader ImageHeader; /** Image header */
-	u32 ErrorCode; /**< Error code during FSBL failure */
-	u32 PrimaryBootDevice; /**< Primary boot device used for booting  */
-	u32 SecondaryBootDevice; /**< Secondary boot device in image header*/
-	XFsblPs_DeviceOps DeviceOps; /**< Device operations for bootmodes */
-	u32 HandoffCpuNo; /**< Number of CPU's FSBL will handoff to */
-	u32 ResetReason; /**< Reset reason */
-	XFsblPs_HandoffValues HandoffValues[10];
-	/**< Handoff address for different CPU's  */
+  u32 Version;                     /**< FSBL Version */
+  u32 PresentStage;                /**< Stage */
+  u32 ProcessorID;                 /**< One of R5-0, R5-LS, A53-0 */
+  u32 A53ExecState;                /**< One of A53 64-bit, A53 32-bit */
+  u32 BootHdrAttributes;           /**< Boot Header attributes */
+  u32 AuthEnabled;                 /**< Check if RSA_EN is programmed or
+                                                   Boot Header authentication is enabled */
+  u32 ImageOffsetAddress;          /**< Flash offset address */
+  XFsblPs_ImageHeader ImageHeader; /** Image header */
+  u32 ErrorCode;                   /**< Error code during FSBL failure */
+  u32 PrimaryBootDevice;           /**< Primary boot device used for booting  */
+  u32 SecondaryBootDevice;         /**< Secondary boot device in image header*/
+  XFsblPs_DeviceOps DeviceOps;     /**< Device operations for bootmodes */
+  u32 HandoffCpuNo;                /**< Number of CPU's FSBL will handoff to */
+  u32 ResetReason;                 /**< Reset reason */
+  XFsblPs_HandoffValues HandoffValues[10];
+  /**< Handoff address for different CPU's  */
 } XFsblPs;
 
 /***************** Macros (Inline Functions) Definitions *********************/
 
 /**
  * ERROR Code Definitions - Main State Chart
-*/
+ */
 
 /* SDK release version */
 #define SDK_RELEASE_YEAR 2022
@@ -145,10 +145,9 @@ typedef struct {
 #define NUM_BLOCKS_A53_32 0x800U
 
 #define BLOCK_SIZE_A53_64_HIGH 0x40000000U
-#define NUM_BLOCKS_A53_64_HIGH                                                 \
-	(((XFSBL_PS_HI_DDR_END_ADDRESS - XFSBL_PS_HI_DDR_START_ADDRESS) +      \
-	  1U) /                                                                \
-	 BLOCK_SIZE_A53_64_HIGH)
+#define NUM_BLOCKS_A53_64_HIGH                                            \
+  (((XFSBL_PS_HI_DDR_END_ADDRESS - XFSBL_PS_HI_DDR_START_ADDRESS) + 1U) / \
+   BLOCK_SIZE_A53_64_HIGH)
 
 #define ATTRIB_MEMORY_A53_64 0x705U
 #define ATTRIB_MEMORY_A53_32 0x15DE6U
@@ -189,26 +188,36 @@ void XFsbl_MeasurePerfTime(XTime tCur);
 /**
  * Functions defined in xfsbl_initialization.c
  */
-u32 XFsbl_Initialize(XFsblPs *const FsblInstancePtr);
-u32 XFsbl_BootDeviceInit(XFsblPs *const FsblInstancePtr);
-u32 XFsbl_TcmEccInit(XFsblPs *const FsblInstancePtr, u32 CpuId);
+u32 XFsbl_Initialize(XFsblPs* const FsblInstancePtr);
+u32 XFsbl_BootDeviceInit(XFsblPs* const FsblInstancePtr);
+u32 XFsbl_TcmEccInit(XFsblPs* const FsblInstancePtr, u32 CpuId);
 void XFsbl_MarkDdrAsReserved(u8 Cond);
 
 /**
  * Functions defined in xfsbl_partition_load.c
  */
-u32 XFsbl_PartitionLoad(XFsblPs *const FsblInstancePtr, u32 PartitionNum);
+#ifndef XFSBL_HASH_TYPE_SHA3
+#  define XFSBL_HASH_TYPE_SHA3 (48U)
+#endif
+u32 XFsbl_PartitionLoad(XFsblPs* const FsblInstancePtr, u32 PartitionNum);
+u32 XFsbl_PartitionCopy(XFsblPs* FsblInstancePtr, u32 PartitionNum);
 u32 XFsbl_PowerUpMemory(u32 MemoryType);
 /**
  * Functions defined in xfsbl_handoff.c
  */
-u32 XFsbl_Handoff(const XFsblPs *const FsblInstancePtr, u32 PartitionNum,
-		  u32 EarlyHandoff);
+u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
+                  u32 EarlyHandoff);
 void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags);
-void complete_handoff(u32 CpuHandoffAddress, u32 RunningCpuExecState);
-u32 XFsbl_HandoffExecute(const XFsblPs *const FsblInstancePtr,
-			 u32 PartitionNum);
-u32 XFsbl_CheckEarlyHandoff(XFsblPs *const FsblInstancePtr, u32 PartitionNum);
+void completeHandoff_RunningCoreIsHandoffCore(u32 CpuHandoffAddress,
+                                              u32 RunningCpuExecState);
+void HandoffJtagMode(const XFsblPs* const FsblInstancePtr);
+
+u32 XFsbl_HandoffExecute(const XFsblPs* const FsblInstancePtr,
+                         u32 PartitionNum);
+u32 XFsbl_CheckEarlyHandoff(XFsblPs* const FsblInstancePtr, u32 PartitionNum);
+
+u32 XFsbl_CheckHandoffCpu(const XFsblPs* const FsblInstancePtr,
+                          u32 DestinationCpu);
 /************************** Variable Definitions *****************************/
 
 #ifdef __cplusplus
