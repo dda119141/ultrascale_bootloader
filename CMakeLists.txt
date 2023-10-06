@@ -20,6 +20,11 @@ add_executable(${PROJECT_NAME}
 	xfsbl_qspi.c
 	xfsbl_main.c
 	xfsbl_misc.c
+	pm_clock.c
+	pm_callbacks.c
+	pm_cfg_obj.c
+	pm_client.c
+	pm_api_sys.c
 	generated/psu_init.c
 	)
 
@@ -37,6 +42,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PRIVATE 
 	"lib/uartps"
 	"lib/qspipsu"
+	"lib/ipipsu"
 	"lib/xiicps"
 	"generated"
 	"lib/common")
@@ -46,6 +52,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 	"uartps"
 	"common"
 	"qspipsu"
+	"xipipsu"
 	"iicps")
 
 target_link_options(${PROJECT_NAME} PRIVATE 
@@ -62,6 +69,7 @@ add_subdirectory(lib/uartps)
 add_subdirectory(lib/bootup)
 add_subdirectory(lib/qspipsu)
 add_subdirectory(lib/xiicps)
+add_subdirectory(lib/ipipsu)
 
 include(clang_tidy)
 AddClangTidy(${PROJECT_NAME})

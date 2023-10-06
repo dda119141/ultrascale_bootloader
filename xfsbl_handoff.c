@@ -502,7 +502,7 @@ END:
  *
  * @param HandoffAddress is handoff address for the FSBL running cpu
  *
- * @param Flags is to determine whether to handoff to applicatio or
+ * @param Flags is to determine whether to handoff to application or
  * 			to be in wfe state
  *
  * @return None
@@ -825,12 +825,13 @@ u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
     if (Status != XFSBL_SUCCESS) {
       Status = XFSBL_ERROR_PM_INIT;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PM_INIT\r\n");
-      goto END;
+      return Status;
     }
 
     Status = XFsbl_ProtectionConfig();
     if (Status != XFSBL_SUCCESS) {
-      goto END;
+      XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_HOOK_BEFORE_HANDOFF\r\n");
+      return Status;
     }
     XFsbl_Printf(DEBUG_GENERAL, "Protection configuration applied\r\n");
   }
@@ -838,7 +839,7 @@ u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
   if (XFsbl_HookBeforeHandoff(EarlyHandoff) != XFSBL_SUCCESS) {
     Status = XFSBL_ERROR_HOOK_BEFORE_HANDOFF;
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_HOOK_BEFORE_HANDOFF\r\n");
-    goto END;
+    return Status;
   }
 
   /**
@@ -854,19 +855,11 @@ u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
    */
   XFsbl_Out32(XFSBL_ERROR_STATUS_REGISTER_OFFSET, XFSBL_COMPLETED);
 
-#ifdef XFSBL_WDT_PRESENT
-  if (XFSBL_MASTER_ONLY_RESET != FsblInstancePtr->ResetReason) {
-    /* Stop WDT as we are exiting FSBL */
-    XFsbl_StopWdt();
-  }
-#endif
-
   Status = XFsbl_HandoffExecute(FsblInstancePtr, PartitionNum);
   if (Status != XFSBL_SUCCESS) {
-    goto END;
+    return Status;
   }
 
-END:
   return Status;
 }
 

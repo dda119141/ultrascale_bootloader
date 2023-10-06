@@ -139,13 +139,6 @@ extern u8 ReadBuffer[READ_BUFFER_SIZE];
 u32 XFsbl_PartitionLoad(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
   u32 Status;
 
-#ifdef XFSBL_WDT_PRESENT
-  if (XFSBL_MASTER_ONLY_RESET != FsblInstancePtr->ResetReason) {
-    /* Restart WDT as partition copy can take more time */
-    XFsbl_RestartWdt();
-  }
-#endif
-
 #ifdef XFSBL_ENABLE_DDR_SR
   XFsbl_PollForDDRReady();
 #endif
@@ -175,7 +168,7 @@ u32 XFsbl_PartitionLoad(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
   /* Check if PMU FW load is done and handoff it to Microblaze */
   XFsbl_CheckPmuFw(FsblInstancePtr, PartitionNum);
 
-  XFsbl_Printf(DEBUG_GENERAL, "Partition load - No pmu firmware present\n\r");
+  XFsbl_Printf(DEBUG_GENERAL, "Partition %d loaded \n\r", PartitionNum);
 
   return XFSBL_SUCCESS;
 }
@@ -479,7 +472,6 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *****************************************************************************/
 u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
-  u32 Status;
   u32 DestinationCpu;
   u32 CpuNo;
   u32 DestinationDevice;
@@ -545,24 +537,47 @@ u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
    */
   Length = (PartitionHeader->TotalDataWordLength) * XIH_PARTITION_WORD_LENGTH;
   DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
-
-  /**
-   * Copy the authentication certificate to auth. buffer
-   * Update Partition length to be copied.
-   * For bitstream it will be taken care saperately
-   */
-
   LoadAddress = (PTRSIZE)PartitionHeader->DestinationLoadAddress;
-  /**
-   * Copy the PL to temporary DDR Address
-   * Copy the PS to Load Address
-   * Copy the PMU firmware to PMU RAM
-   */
 
+  /* Copy the PL to temporary DDR Address */
   if (DestinationDevice == XIH_PH_ATTRB_DEST_DEVICE_PL) {
-    XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PL_NOT_ENABLED \r\n");
-    Status = XFSBL_ERROR_PL_NOT_ENABLED;
-    return Status;
+    /**
+     * In case of PS Only Reset, skip copying
+     * the PL bitstream
+     */
+    if (FsblInstancePtr->ResetReason == XFSBL_PS_ONLY_RESET) {
+      return XFSBL_SUCCESS;
+    }
+
+    if (LoadAddress == XFSBL_DUMMY_PL_ADDR) {
+      LoadAddress = XFSBL_DDR_TEMP_ADDRESS;
+    }
+  }
+
+  /* Copy the PMU firmware to PMU RAM */
+  u32 RegVal;
+  if (DestinationCpu == XIH_PH_ATTRB_DEST_CPU_PMU) {
+    /* Trigger IPI only for first PMUFW partition */
+    if (PartitionHeader->DestinationExecutionAddress != 0U) {
+      /* Enable PMU_0 IPI */
+      XFsbl_Out32(IPI_PMU_0_IER, IPI_PMU_0_IER_PMU_0_MASK);
+
+      /* Trigger PMU0 IPI in PMU IPI TRIG Reg */
+      XFsbl_Out32(IPI_PMU_0_TRIG, IPI_PMU_0_TRIG_PMU_0_MASK);
+    }
+
+    /**
+     * Wait until PMU Microblaze goes to sleep state,
+     * before starting firmware download to PMU RAM
+     */
+    XFsbl_Printf(DEBUG_GENERAL, "Put PMU to sleep state\r\n");
+    do {
+      RegVal = XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL);
+      if ((RegVal & PMU_GLOBAL_GLOBAL_CNTRL_MB_SLEEP_MASK) ==
+          PMU_GLOBAL_GLOBAL_CNTRL_MB_SLEEP_MASK) {
+        break;
+      }
+    } while (1);
   }
 
   /**
@@ -779,6 +794,8 @@ static void XFsbl_CheckPmuFw(const XFsblPs* const FsblInstancePtr,
 
   /* If all partitions of PMU FW loaded, handoff it to PMU MicroBlaze */
   if (PmuFwLoadDone == TRUE) {
+    XFsbl_Printf(DEBUG_GENERAL, "PMUFW loaded - Wake-Up PMU\r\n");
+
     /* Wakeup the processor */
     XFsbl_Out32(PMU_GLOBAL_GLOBAL_CNTRL,
                 XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL) | 0x1);

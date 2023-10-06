@@ -34,6 +34,10 @@ SECTIONS
    __data_end = .;
 } > psu_ocm_ram_2_S_AXI_BASEADDR
 
+.sys_cfg_data (ALIGN(64)): {
+    *(.sys_cfg_data)
+ } > psu_ocm_ram_2_S_AXI_BASEADDR
+
 .bss (NOLOAD) : {
    . = ALIGN(64);
    __bss_start__ = .;

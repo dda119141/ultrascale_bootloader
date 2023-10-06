@@ -32,7 +32,10 @@
 /***************************** Include Files *********************************/
 #include "xfsbl_misc_drivers.h"
 
+#include "pm_api_sys.h"
+#include "pm_cfg_obj.h"
 #include "xfsbl_hw.h"
+#include "xipipsu.h"
 
 /**
  * Include WDT only if WDT is present
@@ -46,11 +49,13 @@
 /**************************** Type Definitions *******************************/
 
 /***************** Macros (Inline Functions) Definitions *********************/
+
 #ifdef XPAR_XIPIPSU_0_DEVICE_ID
 #  define IPI_DEVICE_ID XPAR_XIPIPSU_0_DEVICE_ID
 #  define IPI_PMU_PM_INT_MASK XPAR_XIPIPS_TARGET_PSU_PMU_0_CH0_MASK
 #  define PM_INIT 21U
 #endif
+
 #define PM_INIT_COMPLETED_KEY 0x5A5A5A5AU
 /************************** Function Prototypes ******************************/
 #ifdef XFSBL_WDT_PRESENT
@@ -240,6 +245,10 @@ void XFsbl_StopWdt(void) {
  *
  *******************************************************************************/
 u32 XFsbl_PmInit(void) {
+  u32 Status = XFSBL_SUCCESS;
+  XIpiPsu IpiInstance;
+  u32 CfgCmd = (u32)((u64)&XPm_ConfigObject[0]);
+
   /* Proceed only if SYSCFG is enabled */
   /**
    * Check if PMU FW is present
@@ -253,10 +262,28 @@ u32 XFsbl_PmInit(void) {
                  "PMU-FW is not running, certain applications may "
                  "not be supported.\n\r");
     return XFSBL_SUCCESS;
-  } else {
-    XFsbl_Printf(DEBUG_GENERAL,
-                 "PMU firmware is present, but IPI is disabled\r\n");
-    return XFSBL_SUCCESS;
-    //    return XFSBL_ERROR_PM_INIT;
   }
+
+  /* Initialize IPI peripheral */
+  XIpiPsu_Config* Config = XIpiPsu_LookupConfig(IPI_DEVICE_ID);
+  if (Config == NULL) {
+    return XFSBL_ERROR_PM_INIT;
+  }
+
+  Status = XIpiPsu_CfgInitialize(&IpiInstance, Config, Config->BaseAddress);
+  if (XFSBL_SUCCESS != Status) {
+    return Status;
+  }
+
+  Status = XPm_InitXilpm(&IpiInstance);
+  if (XFSBL_SUCCESS != Status) {
+    return Status;
+  }
+
+  Status = XPm_SetConfiguration(CfgCmd);
+  if (XFSBL_SUCCESS != Status) {
+    return Status;
+  }
+
+  return Status;
 }
