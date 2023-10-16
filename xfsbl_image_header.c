@@ -136,7 +136,6 @@ extern u8* ImageHdr;
  *
  *****************************************************************************/
 u32 XFsbl_ValidateChecksum(u32 Buffer[], u32 Length) {
-  u32 Status;
   u32 Checksum = 0U;
   u32 Count;
 
@@ -144,8 +143,7 @@ u32 XFsbl_ValidateChecksum(u32 Buffer[], u32 Length) {
    * Length has to be at least equal to 2,
    */
   if (Length < 2U) {
-    Status = XFSBL_FAILURE;
-    goto END;
+    return XFSBL_FAILURE;
   }
 
   /**
@@ -170,13 +168,10 @@ u32 XFsbl_ValidateChecksum(u32 Buffer[], u32 Length) {
   if (Buffer[Length - 1U] != Checksum) {
     XFsbl_Printf(DEBUG_GENERAL, "Error: Checksum 0x%0lx != %0lx\r\n", Checksum,
                  Buffer[Length - 1U]);
-    Status = XFSBL_FAILURE;
+    return XFSBL_FAILURE;
   } else {
-    Status = XFSBL_SUCCESS;
+    return XFSBL_SUCCESS;
   }
-
-END:
-  return Status;
 }
 
 /****************************************************************************/
@@ -197,18 +192,16 @@ END:
 
 static u32 XFsbl_ValidateImageHeaderTable(
     XFsblPs_ImageHeaderTable* ImageHeaderTable) {
-  u32 Status;
   u32 PartitionPresentDevice;
 
   /**
    * Check the check sum of the image header table
    */
-  Status = XFsbl_ValidateChecksum((u32*)ImageHeaderTable,
-                                  XIH_IHT_LEN / XIH_PARTITION_WORD_LENGTH);
+  u32 Status = XFsbl_ValidateChecksum((u32*)ImageHeaderTable,
+                                      XIH_IHT_LEN / XIH_PARTITION_WORD_LENGTH);
   if (XFSBL_SUCCESS != Status) {
-    Status = XFSBL_ERROR_IHT_CHECKSUM;
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_IHT_CHECKSUM\n\r");
-    goto END;
+    return Status;
   }
 
   /**
@@ -218,12 +211,10 @@ static u32 XFsbl_ValidateImageHeaderTable(
   PartitionPresentDevice = ImageHeaderTable->PartitionPresentDevice;
   if ((PartitionPresentDevice < XIH_IHT_PPD_SAME) ||
       (PartitionPresentDevice > XIH_IHT_PPD_SATA)) {
-    Status = XFSBL_ERROR_PPD;
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PPD\n\r");
-    goto END;
+    return XFSBL_ERROR_PPD;
   } else if (PartitionPresentDevice != XIH_IHT_PPD_SAME) {
-    Status = XFSBL_STATUS_SECONDARY_BOOT_MODE;
-    goto END;
+    return XFSBL_STATUS_SECONDARY_BOOT_MODE;
   } else {
     /*MISRAC compliance */
   }
@@ -233,9 +224,8 @@ static u32 XFsbl_ValidateImageHeaderTable(
    */
   if ((ImageHeaderTable->NoOfPartitions <= XIH_MIN_PARTITIONS) ||
       (ImageHeaderTable->NoOfPartitions > XIH_MAX_PARTITIONS)) {
-    Status = XFSBL_ERROR_NO_OF_PARTITIONS;
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_NO_OF_PARTITIONS\n\r");
-    goto END;
+    return XFSBL_ERROR_NO_OF_PARTITIONS;
   }
 
   /**
@@ -252,7 +242,6 @@ static u32 XFsbl_ValidateImageHeaderTable(
   XFsbl_Printf(DEBUG_INFO, "Partition Present Device: 0x%0lx \n\r",
                ImageHeaderTable->PartitionPresentDevice);
 
-END:
   return Status;
 }
 

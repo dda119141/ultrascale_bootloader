@@ -45,6 +45,143 @@ static void XFsbl_FallBack(void);
 /************************** Variable Definitions *****************************/
 XFsblPs FsblInstance = {0x3U, XFSBL_SUCCESS, 0U, 0U, 0U, 0U};
 
+FsblStagesVal_t FsblStagesVal = {SYSTEM_INIT, XFSBL_SUCCESS, FALSE, 0U};
+
+static void load_artifacts(XFsblPs* const FsblInstance,
+                           FsblStagesVal_t* const stage) {
+  /**
+   * Load the partitions
+   *  image header
+   *  partition header
+   *  partition parameters
+   */
+  stage->FsblStageStatus =
+      XFsbl_PartitionLoad(FsblInstance, stage->PartitionNum);
+
+  if (XFSBL_SUCCESS != stage->FsblStageStatus) {
+    stage->FsblStageStatus += XFSBL_ERROR_STAGE_3_PARTITION_LOAD_FAILED;
+    stage->FsblStage = XFSBL_STAGE_ERR;
+  } else {
+    if (stage->PartitionNum <
+        (FsblInstance->ImageHeader.ImageHeaderTable.NoOfPartitions - 1U)) {
+      stage->PartitionNum++;
+    } else {
+      XFsbl_Printf(DEBUG_GENERAL,
+                   "All Partitions "
+                   "Loaded \n\r");
+
+      stage->FsblStage = XFSBL_HANDOFF;
+      stage->EarlyHandoff = stage->FsblStageStatus;
+    }
+  }
+}
+
+static void initialize_primary_bootdevice(XFsblPs* const FsblInstance,
+                                          FsblStagesVal_t* const stage) {
+  /**
+   * 	Primary Device, Secondary boot device
+   *  DeviceOps, image header,  partition header
+   */
+  stage->FsblStageStatus = XFsbl_BootDeviceInit(FsblInstance);
+
+  switch (stage->FsblStageStatus) {
+  case XFSBL_STATUS_JTAG: {
+    /*
+     * Mark RPU cores as usable in JTAG boot
+     * mode.
+     */
+    Xil_Out32(XFSBL_R5_USAGE_STATUS_REG,
+              (Xil_In32(XFSBL_R5_USAGE_STATUS_REG) |
+               (XFSBL_R5_0_STATUS_MASK | XFSBL_R5_1_STATUS_MASK)));
+
+    stage->FsblStage = XFSBL_HANDOFF;
+  } break;
+  case XFSBL_SUCCESS: {
+    XFsbl_Printf(DEBUG_GENERAL, "Boot Device Init Success \n\r");
+
+    /**
+     * Start the partition loading from 1
+     * 0th partition will be FSBL
+     */
+    stage->PartitionNum = 0x1U;
+
+    stage->FsblStage = XFSBL_PARTITION_LOAD;
+
+  } break;
+  default: {
+    stage->FsblStageStatus += XFSBL_ERROR_STAGE_2_BOOTDEVICE_INIT_FAILED;
+    stage->FsblStage = XFSBL_STAGE_ERR;
+  } break;
+  }
+}
+
+static void perform_handoff(const XFsblPs* const FsblInstance,
+                            FsblStagesVal_t* const stage) {
+  /**
+   * Handoff to the applications
+   * Handoff address
+   * xip
+   * ps7 post config
+   */
+  stage->FsblStageStatus =
+      XFsbl_Handoff(FsblInstance, stage->PartitionNum, stage->EarlyHandoff);
+
+  if (STATUS_PARTITION_LOAD_IN_PROGRESS == stage->FsblStageStatus) {
+    XFsbl_Printf(DEBUG_INFO,
+                 "Early handoff to a application "
+                 "complete \n\r");
+    XFsbl_Printf(DEBUG_INFO,
+                 "Continuing to load remaining "
+                 "partitions \n\r");
+
+    stage->PartitionNum++;
+    stage->FsblStage = XFSBL_PARTITION_LOAD;
+  } else if (XFSBL_STATUS_CONTINUE_OTHER_HANDOFF == stage->FsblStageStatus) {
+    XFsbl_Printf(DEBUG_INFO,
+                 "Early handoff to a application "
+                 "complete \n\r");
+    XFsbl_Printf(DEBUG_INFO,
+                 "Continuing handoff to other "
+                 "applications, if present \n\r");
+    stage->EarlyHandoff = FALSE;
+  } else if (XFSBL_SUCCESS != stage->FsblStageStatus) {
+    stage->FsblStageStatus += XFSBL_ERROR_HANDOFF_FAILED;
+    stage->FsblStage = XFSBL_STAGE_ERR;
+  } else {
+    stage->FsblStage = XFSBL_STAGE_POST_HANDOFF;
+  }
+}
+
+static void print_stage_status(const FsblStagesVal_t* const stage) {
+  switch (stage->FsblStage) {
+  case SYSTEM_INIT:
+    XFsbl_Printf(DEBUG_GENERAL, "====enter system init \n ");
+    break;
+  case SYSTEM_PRIMARY_BOOT_DEVICE_INIT:
+    XFsbl_Printf(DEBUG_GENERAL,
+                 "====enter Primary boot device init "
+                 "=== \n\r");
+    break;
+  case XFSBL_PARTITION_LOAD:
+    XFsbl_Printf(DEBUG_GENERAL,
+                 "======= In Stage 3, Partition Load "
+                 "No:%d ======= \n\r",
+                 stage->PartitionNum);
+    break;
+  case XFSBL_HANDOFF:
+    XFsbl_Printf(DEBUG_GENERAL, "==== HandOFF=== \n\r");
+    break;
+  case XFSBL_STAGE_ERR:
+    XFsbl_Printf(DEBUG_GENERAL,
+                 "================= In Stage Err "
+                 "============ \n\r");
+    break;
+  default:
+    XFsbl_Printf(DEBUG_GENERAL, "==== Unsupported stage === \n\r");
+    break;
+  }
+}
+
 /*****************************************************************************/
 /** This is the FSBL main function and is implemented stage wise.
  *
@@ -54,173 +191,47 @@ XFsblPs FsblInstance = {0x3U, XFSBL_SUCCESS, 0U, 0U, 0U, 0U};
  *
  *****************************************************************************/
 int main(void) {
-  /**
-   * Local variables
-   */
-  u32 FsblStatus = XFSBL_SUCCESS;
-  u32 FsblStage = SYSTEM_INIT;
-  u32 PartitionNum = 0U;
-  u32 EarlyHandoff = FALSE;
-
 #if defined(EL3) && (EL3 != 1)
 #  error "FSBL should be generated using only EL3 BSP"
 #endif
-  /**
-   * Initialize globals.
-   */
-  while (FsblStage <= XFSBL_STAGE_DEFAULT) {
-    switch (FsblStage) {
+
+  while (FsblStagesVal.FsblStage <= XFSBL_STAGE_POST_HANDOFF) {
+    switch (FsblStagesVal.FsblStage) {
     case SYSTEM_INIT: {
-      XFsbl_Printf(DEBUG_GENERAL, "====enter system init \n ");
-      FsblStatus = XFsbl_Initialize(&FsblInstance);
+      print_stage_status(&FsblStagesVal);
+      FsblStagesVal.FsblStageStatus = XFsbl_Initialize(&FsblInstance);
 
-      if (XFSBL_SUCCESS != FsblStatus) {
-        FsblStatus += XFSBL_ERROR_STAGE_1_INIT_FAILED;
-        FsblStage = XFSBL_STAGE_ERR;
+      if (XFSBL_SUCCESS != FsblStagesVal.FsblStageStatus) {
+        FsblStagesVal.FsblStageStatus += XFSBL_ERROR_STAGE_1_INIT_FAILED;
+        FsblStagesVal.FsblStage = XFSBL_STAGE_ERR;
 
       } else {
-        FsblStage = SYSTEM_PRIMARY_BOOT_DEVICE_INIT;
+        FsblStagesVal.FsblStage = SYSTEM_PRIMARY_BOOT_DEVICE_INIT;
       }
     } break;
 
-    case SYSTEM_PRIMARY_BOOT_DEVICE_INIT: {
-      XFsbl_Printf(DEBUG_GENERAL,
-                   "====enter Primary boot device init "
-                   "=== \n\r");
-
-      /**
-       * 	Primary Device, Secondary boot device
-       *  DeviceOps, image header,  partition header
-       */
-      FsblStatus = XFsbl_BootDeviceInit(&FsblInstance);
-
-      switch (FsblStatus) {
-      case XFSBL_STATUS_JTAG: {
-        /*
-         * Mark RPU cores as usable in JTAG boot
-         * mode.
-         */
-        Xil_Out32(XFSBL_R5_USAGE_STATUS_REG,
-                  (Xil_In32(XFSBL_R5_USAGE_STATUS_REG) |
-                   (XFSBL_R5_0_STATUS_MASK | XFSBL_R5_1_STATUS_MASK)));
-
-        /**
-         * This is JTAG boot mode, go to the
-         * handoff stage
-         */
-        FsblStage = XFSBL_HANDOFF;
-      } break;
-      case XFSBL_SUCCESS: {
-        XFsbl_Printf(DEBUG_GENERAL, "Boot Device Init Success \n\r");
-
-        /**
-         * Start the partition loading from 1
-         * 0th partition will be FSBL
-         */
-        PartitionNum = 0x1U;
-
-        FsblStage = XFSBL_PARTITION_LOAD;
-
-      } break;
-      default: {
-        FsblStatus += XFSBL_ERROR_STAGE_2_BOOTDEVICE_INIT_FAILED;
-        FsblStage = XFSBL_STAGE_ERR;
-      } break;
-      }
-
-    } break;
-
-    case XFSBL_PARTITION_LOAD: {
-      XFsbl_Printf(DEBUG_GENERAL,
-                   "======= In Stage 3, Partition Load "
-                   "No:%d ======= \n\r",
-                   PartitionNum);
-
-      /**
-       * Load the partitions
-       *  image header
-       *  partition header
-       *  partition parameters
-       */
-      FsblStatus = XFsbl_PartitionLoad(&FsblInstance, PartitionNum);
-      if (XFSBL_SUCCESS != FsblStatus) {
-        FsblStatus += XFSBL_ERROR_STAGE_3_PARTITION_LOAD_FAILED;
-        FsblStage = XFSBL_STAGE_ERR;
-      } else {
-        if (PartitionNum <
-            (FsblInstance.ImageHeader.ImageHeaderTable.NoOfPartitions - 1U)) {
-          PartitionNum++;
-        } else {
-          XFsbl_Printf(DEBUG_GENERAL,
-                       "All Partitions "
-                       "Loaded \n\r");
-
-          FsblStage = XFSBL_HANDOFF;
-          EarlyHandoff = FsblStatus;
-        }
-      } /* End of else loop for Load Success */
-    } break;
-
+    case SYSTEM_PRIMARY_BOOT_DEVICE_INIT:
+      print_stage_status(&FsblStagesVal);
+      initialize_primary_bootdevice(&FsblInstance, &FsblStagesVal);
+      break;
+    case XFSBL_PARTITION_LOAD:
+      print_stage_status(&FsblStagesVal);
+      load_artifacts(&FsblInstance, &FsblStagesVal);
+      break;
     case XFSBL_HANDOFF: {
-      XFsbl_Printf(DEBUG_GENERAL, "==== HandOFF=== \n\r");
-
-      /**
-       * Handoff to the applications
-       * Handoff address
-       * xip
-       * ps7 post config
-       */
-      FsblStatus = XFsbl_Handoff(&FsblInstance, PartitionNum, EarlyHandoff);
-
-      if (STATUS_PARTITION_LOAD_IN_PROGRESS == FsblStatus) {
-        XFsbl_Printf(DEBUG_INFO,
-                     "Early handoff to a application "
-                     "complete \n\r");
-        XFsbl_Printf(DEBUG_INFO,
-                     "Continuing to load remaining "
-                     "partitions \n\r");
-
-        PartitionNum++;
-        FsblStage = XFSBL_PARTITION_LOAD;
-      } else if (XFSBL_STATUS_CONTINUE_OTHER_HANDOFF == FsblStatus) {
-        XFsbl_Printf(DEBUG_INFO,
-                     "Early handoff to a application "
-                     "complete \n\r");
-        XFsbl_Printf(DEBUG_INFO,
-                     "Continuing handoff to other "
-                     "applications, if present \n\r");
-        EarlyHandoff = FALSE;
-      } else if (XFSBL_SUCCESS != FsblStatus) {
-        FsblStatus += XFSBL_ERROR_HANDOFF_FAILED;
-        FsblStage = XFSBL_STAGE_ERR;
-      } else {
-        /**
-         * we should never be here
-         */
-        FsblStage = XFSBL_STAGE_DEFAULT;
-      }
+      print_stage_status(&FsblStagesVal);
+      perform_handoff(&FsblInstance, &FsblStagesVal);
     } break;
 
     case XFSBL_STAGE_ERR: {
-      XFsbl_Printf(DEBUG_INFO,
-                   "================= In Stage Err "
-                   "============ \n\r");
-
-      XFsbl_ErrorLockDown(FsblStatus);
-      /**
-       * we should never be here
-       */
-      FsblStage = XFSBL_STAGE_DEFAULT;
+      XFsbl_ErrorLockDown(FsblStagesVal.FsblStageStatus);
     } break;
 
-    case XFSBL_STAGE_DEFAULT:
+    case XFSBL_STAGE_POST_HANDOFF:
     default: {
-      /**
-       * we should never be here
-       */
       XFsbl_Printf(DEBUG_GENERAL,
-                   "In default stage: "
-                   "We should never be here \n\r");
+                   "In post handoff stage: "
+                   "handoffs completed \n\r");
 
       /**
        * Exit FSBL
@@ -231,20 +242,15 @@ int main(void) {
 
     } /* End of switch(FsblStage) */
 
-    if (FsblStage == XFSBL_STAGE_DEFAULT) {
+    if (FsblStagesVal.FsblStage == XFSBL_STAGE_POST_HANDOFF) {
       break;
     }
   } /* End of while(1)  */
 
-  /**
-   * We should never be here
-   */
   XFsbl_Printf(DEBUG_GENERAL,
-               "In default stage: "
-               "We should never be here \n\r");
-  /**
-   * Exit FSBL
-   */
+               "Handoff probably failed: "
+               "Exiting fsbl \n\r");
+
   XFsbl_HandoffExit(0U, XFSBL_NO_HANDOFFEXIT);
 
   return 0;
@@ -263,25 +269,19 @@ int main(void) {
  * @note Fallback is applied only for fallback supported bootmodes
  *****************************************************************************/
 void XFsbl_ErrorLockDown(u32 ErrorStatus) {
-  u32 BootMode;
-
-  /**
-   * Print the FSBL error
-   */
-  XFsbl_Printf(DEBUG_GENERAL, "Fsbl Error Status: 0x%08lx\r\n", ErrorStatus);
-
   /**
    * Update the error status register
    * and Fsbl instance structure
    */
   XFsbl_Out32(XFSBL_ERROR_STATUS_REGISTER_OFFSET, ErrorStatus);
   FsblInstance.ErrorCode = ErrorStatus;
+  XFsbl_Printf(DEBUG_GENERAL, "Fsbl Error Status: 0x%08lx\r\n", ErrorStatus);
 
   /**
    * Read Boot Mode register
    */
-  BootMode = XFsbl_In32(CRL_APB_BOOT_MODE_USER) &
-             CRL_APB_BOOT_MODE_USER_BOOT_MODE_MASK;
+  u32 BootMode = XFsbl_In32(CRL_APB_BOOT_MODE_USER) &
+                 CRL_APB_BOOT_MODE_USER_BOOT_MODE_MASK;
 
   /**
    * Fallback if bootmode supports
@@ -293,9 +293,6 @@ void XFsbl_ErrorLockDown(u32 ErrorStatus) {
       (BootMode == XFSBL_SD1_LS_BOOT_MODE)) {
     XFsbl_FallBack();
   } else {
-    /**
-     * Be in while loop if fallback is not supported
-     */
     XFsbl_Printf(DEBUG_GENERAL, "Fallback not supported \n\r");
 
     /**

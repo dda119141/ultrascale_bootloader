@@ -87,6 +87,13 @@ typedef struct {
   /**< Handoff address for different CPU's  */
 } XFsblPs;
 
+typedef struct {
+  u32 FsblStage;
+  u32 FsblStageStatus;
+  u32 EarlyHandoff; /** <Whether early handoff is needed or not */
+  u32 PartitionNum; /** <Partition number to be loaded> */
+} FsblStagesVal_t;
+
 /***************** Macros (Inline Functions) Definitions *********************/
 
 /**
@@ -134,7 +141,7 @@ typedef struct {
 
 #define XFSBL_HANDOFF (0x4U)
 #define XFSBL_STAGE_ERR (0x5U)
-#define XFSBL_STAGE_DEFAULT (0x6U)
+#define XFSBL_STAGE_POST_HANDOFF (0x6U)
 
 /* A53 MMU definitions */
 
@@ -175,7 +182,8 @@ typedef struct {
 #define XFSBL_STATE_PROC_INFO_MASK (0x3U << XFSBL_STATE_PROC_SHIFT)
 #define XFSBL_FSBL_ENCRYPTED_MASK (0x8U)
 
-/************************** Function Prototypes ******************************/
+/************************** Function Prototypes
+ ******************************/
 /**
  * Functions defined in xfsbl_main.c
  */

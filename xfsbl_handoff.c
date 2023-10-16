@@ -757,6 +757,32 @@ u32 XFsbl_HandoffExecute(const XFsblPs* const FsblInstancePtr,
       completeHandoff_RunningCoreIsHandoffCore(
           FsblInstancePtr->HandoffValues[CpuIndex].HandoffAddress, ExecState);
     }
+#if 0
+    if ((EarlyHandoff == TRUE) && (CpuNeedsEarlyHandoff == TRUE)){
+
+			/* Enable cache again as we will continue loading partitions */
+			Xil_DCacheEnable();
+
+			if (PartitionNum <
+					(FsblInstancePtr->
+							ImageHeader.ImageHeaderTable.NoOfPartitions-1U)) {
+				/**
+				 * If this is not the last handoff CPU, return back and continue
+				 * loading remaining partitions in stage 3
+				 */
+				CpuIndexEarlyHandoff++;
+				Status = XFSBL_STATUS_CONTINUE_PARTITION_LOAD;
+			}
+			else {
+				/**
+				 * Early handoff to all required CPUs is done, continue with
+				 * regular handoff for remaining applications, as applicable
+				 */
+				Status = XFSBL_STATUS_CONTINUE_OTHER_HANDOFF;
+			}
+			goto END;
+		}
+#endif
     /* Go to the next cpu */
     CpuIndex++;
   }
