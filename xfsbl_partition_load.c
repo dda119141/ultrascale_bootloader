@@ -570,7 +570,7 @@ u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
      * Wait until PMU Microblaze goes to sleep state,
      * before starting firmware download to PMU RAM
      */
-    XFsbl_Printf(DEBUG_GENERAL, "Put PMU to sleep state\r\n");
+    XFsbl_Printf(DEBUG_INFO, "Put PMU to sleep state\r\n");
     do {
       RegVal = XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL);
       if ((RegVal & PMU_GLOBAL_GLOBAL_CNTRL_MB_SLEEP_MASK) ==

@@ -117,12 +117,6 @@ static void initialize_primary_bootdevice(XFsblPs* const FsblInstance,
 
 static void perform_handoff(const XFsblPs* const FsblInstance,
                             FsblStagesVal_t* const stage) {
-  /**
-   * Handoff to the applications
-   * Handoff address
-   * xip
-   * ps7 post config
-   */
   stage->FsblStageStatus =
       XFsbl_Handoff(FsblInstance, stage->PartitionNum, stage->EarlyHandoff);
 

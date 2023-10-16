@@ -254,6 +254,13 @@ typedef struct {
   u32 Checksum; /**< checksum of the partition header */
 } XFsblPs_PartitionHeader;
 
+typedef struct {
+  const XFsblPs_PartitionHeader* PartitionHeader;
+  u32 PartitionIndex; /* Partition Index within the whole partitions layout*/
+  u32 RunningCpu;     /* Running CPU */
+  u32 DestinationCpu; /* Eventual CPU to handoff */
+} XfsblPs_RuntimePartitionConfiguration;
+
 /**
  * Structure of the image header which contains
  * information of image header table and

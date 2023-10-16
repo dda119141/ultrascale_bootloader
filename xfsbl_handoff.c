@@ -902,50 +902,6 @@ u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
  *****************************************************************************/
 u32 XFsbl_CheckEarlyHandoff(XFsblPs* FsblInstancePtr, u32 PartitionNum) {
   u32 Status = FALSE;
-#if defined(XFSBL_EARLY_HANDOFF)
-  u32 CpuNeedsEarlyHandoff = FALSE;
-  u32 DestinationCpu = 0;
-  u32 DestinationDev = 0;
-  u32 DestinationCpuNxt = 0;
-  u32 DestinationDevNxt = 0;
-
-  DestinationCpu = XFsbl_GetDestinationCpu(
-      &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
-  DestinationDev = XFsbl_GetDestinationDevice(
-      &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum]);
-  if ((DestinationCpu == XIH_PH_ATTRB_DEST_CPU_NONE) &&
-      ((DestinationDev == XIH_PH_ATTRB_DEST_DEVICE_PS) ||
-       (DestinationDev == XIH_PH_ATTRB_DEST_DEVICE_NONE))) {
-    /* If dest device is not PS, retain the dest CPU as NONE/0 */
-    DestinationCpu = FsblInstancePtr->ProcessorID;
-  }
-
-  if ((PartitionNum + 1) <=
-      (FsblInstancePtr->ImageHeader.ImageHeaderTable.NoOfPartitions - 1U)) {
-    DestinationCpuNxt = XFsbl_GetDestinationCpu(
-        &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum + 1]);
-    DestinationDevNxt = XFsbl_GetDestinationDevice(
-        &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum + 1]);
-
-    if ((DestinationCpuNxt == XIH_PH_ATTRB_DEST_CPU_NONE) &&
-        ((DestinationDevNxt == XIH_PH_ATTRB_DEST_DEVICE_PS) ||
-         (DestinationDevNxt == XIH_PH_ATTRB_DEST_DEVICE_NONE))) {
-      DestinationCpuNxt = FsblInstancePtr->ProcessorID;
-    }
-  }
-
-  /**
-   *  Early handoff needed if destination CPU needs early handoff AND
-   *  if handoff CPU is not same as running CPU AND
-   *  if this is the last partition of this application
-   */
-  CpuNeedsEarlyHandoff = XFsbl_CheckEarlyHandoffCpu(DestinationCpu);
-  if ((CpuNeedsEarlyHandoff == TRUE) &&
-      (DestinationCpu != FsblInstancePtr->ProcessorID) &&
-      (DestinationCpuNxt != DestinationCpu)) {
-    Status = TRUE;
-  }
-#endif
   return Status;
 }
 
