@@ -244,7 +244,7 @@ inline static u32 XFsbl_ValidateImageHeaderTable(
   return Status;
 }
 
-inline static u32 retrieve_and_handoff_ATF_parameters(
+inline static u32 retrieve_handoff_atf_parameters(
     XfsblPs_RuntimePartitionConfiguration* const PartConfig, u32 EntryCount) {
   const XFsblPs_PartitionHeader* const CurrPartitionHdr =
       PartConfig->PartitionHeader;
@@ -386,7 +386,7 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
     PartConfig.PartitionHeader = &ImageHeader->PartitionHeader[PartitionIndex];
     PartConfig.RunningCpu = RunningCpu;
     PartConfig.PartitionIndex = PartitionIndex;
-    const u32 Count = retrieve_and_handoff_ATF_parameters(
+    const u32 Count = retrieve_handoff_atf_parameters(
         &PartConfig, ATF_params_retrieval_count);
     ATF_params_retrieval_count = Count;
 
@@ -492,7 +492,7 @@ static u32 XFsbl_CheckValidMemoryAddress(u64 Address, u32 CpuId, u32 DevId) {
   return XFSBL_ERROR_ADDRESS;
 }
 
-static u32 CheckPartitionHeaderForEncryptionAndValidation(
+static u32 verify_encryption_values(
     const XFsblPs_PartitionHeader* const PartitionHeader) {
   u32 IsEncrypted, IsAuthenticated;
   u32 Status;
@@ -522,7 +522,6 @@ static u32 CheckPartitionHeaderForEncryptionAndValidation(
     return XFSBL_FAILURE;
   }
 #endif
-
   /**
    * check for authentication and encryption length
    */
@@ -539,9 +538,6 @@ static u32 CheckPartitionHeaderForEncryptionAndValidation(
       return Status;
     }
   } else if ((IsAuthenticated == TRUE) && (IsEncrypted == FALSE)) {
-    /**
-     * TotalDataWordLength should be more
-     */
     if ((PartitionHeader->UnEncryptedDataWordLength !=
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength >=
@@ -551,9 +547,6 @@ static u32 CheckPartitionHeaderForEncryptionAndValidation(
       return Status;
     }
   } else if ((IsAuthenticated == FALSE) && (IsEncrypted == TRUE)) {
-    /**
-     * EncryptedDataWordLength should be more
-     */
     if ((PartitionHeader->UnEncryptedDataWordLength >=
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength !=
@@ -564,9 +557,6 @@ static u32 CheckPartitionHeaderForEncryptionAndValidation(
     }
   } else /* Authenticated and Encrypted */
   {
-    /**
-     * TotalDataWordLength should be more
-     */
     if ((PartitionHeader->UnEncryptedDataWordLength >=
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength >=
@@ -598,7 +588,7 @@ inline static void print_partitionHeaderDetails(
                PartitionHeader->PartitionAttributes);
 }
 
-static inline u32 rCore_boot_check_destinationCPU(
+inline static u32 rCore_boot_check_dest_cpu(
     const XFsblPs_PartitionHeader* const PartitionHeader, u32 RunningCpu,
     u32 DestinationCpu) {
   /**
@@ -677,18 +667,11 @@ u32 XFsbl_ValidatePartitionHeader(XFsblPs_PartitionHeader* PartitionHeader,
     DestinationCpu = RunningCpu;
   }
 
-  Status = CheckPartitionHeaderForEncryptionAndValidation(PartitionHeader);
+  Status = verify_encryption_values(PartitionHeader);
   if (Status != XFSBL_SUCCESS) {
     return Status;
   }
 
-  /**
-   * handled on partition copy block
-   * Check for Destination Load Address,
-   * executable address
-   * Address not in TCM, OCM, DDR, PL
-   *  No DDR and address in DDR
-   */
   DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
   Status =
       XFsbl_CheckValidMemoryAddress(PartitionHeader->DestinationLoadAddress,
@@ -697,8 +680,8 @@ u32 XFsbl_ValidatePartitionHeader(XFsblPs_PartitionHeader* PartitionHeader,
     return Status;
   }
 
-  Status = rCore_boot_check_destinationCPU(PartitionHeader, RunningCpu,
-                                           DestinationCpu);
+  Status =
+      rCore_boot_check_dest_cpu(PartitionHeader, RunningCpu, DestinationCpu);
   if (Status != XFSBL_SUCCESS) {
     return Status;
   }

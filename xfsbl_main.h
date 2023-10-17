@@ -216,8 +216,8 @@ u32 XFsbl_PowerUpMemory(u32 MemoryType);
 u32 XFsbl_Handoff(const XFsblPs* const FsblInstancePtr, u32 PartitionNum,
                   u32 EarlyHandoff);
 void XFsbl_HandoffExit(u64 HandoffAddress, u32 Flags);
-void completeHandoff_RunningCoreIsHandoffCore(u32 CpuHandoffAddress,
-                                              u32 RunningCpuExecState);
+void handoff_within_running_core(u32 CpuHandoffAddress,
+                                 u32 RunningCpuExecState);
 void HandoffJtagMode(const XFsblPs* const FsblInstancePtr);
 
 u32 XFsbl_HandoffExecute(const XFsblPs* const FsblInstancePtr,
