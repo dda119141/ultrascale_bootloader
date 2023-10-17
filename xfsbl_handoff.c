@@ -194,6 +194,7 @@ inline static u32 power_up_reset_a53_1(u32 ExecState) {
 
   return XFSBL_SUCCESS;
 }
+
 inline static u32 power_up_reset_a53_2(u32 ExecState) {
   u32 RegValue;
   u32 Status;
