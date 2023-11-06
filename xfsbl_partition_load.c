@@ -232,11 +232,9 @@ static u32 XFsbl_PartitionHeaderValidation(XFsblPs* FsblInstancePtr,
  *****************************************************************************/
 u32 XFsbl_CheckHandoffCpu(const XFsblPs* const FsblInstancePtr,
                           u32 DestinationCpu) {
-  u32 ValidHandoffCpuNo;
   u32 Index;
   u32 CpuId;
-
-  ValidHandoffCpuNo = FsblInstancePtr->HandoffCpuNo;
+  const u32 ValidHandoffCpuNo = FsblInstancePtr->HandoffCpuNo;
 
   for (Index = 0U; Index < ValidHandoffCpuNo; Index++) {
     CpuId = FsblInstancePtr->HandoffValues[Index].CpuSettings &
@@ -472,26 +470,13 @@ END:
  * 			returns XFSBL_SUCCESS on success
  *****************************************************************************/
 u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
-  u32 DestinationCpu;
-  u32 CpuNo;
-  u32 DestinationDevice;
-  u32 ExecState;
-  XFsblPs_PartitionHeader* PartitionHeader;
-  u32 SrcAddress;
-  PTRSIZE LoadAddress;
-  u32 Length;
-
   /**
    * Assign the partition header to local variable
    */
-  PartitionHeader = &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
+  const XFsblPs_PartitionHeader* const PartitionHeader =
+      &FsblInstancePtr->ImageHeader.PartitionHeader[PartitionNum];
 
-  /**
-   * Check for XIP image
-   * No need to copy for XIP image
-   */
-  DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
-
+  u32 DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
   /**
    * if destination cpu is not present, it means it is for same cpu
    */
@@ -506,11 +491,12 @@ u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
      * This is for XIP image. For other partitions it handoff
      * address is updated after partition validation
      */
-    CpuNo = FsblInstancePtr->HandoffCpuNo;
     if (XFsbl_CheckHandoffCpu(FsblInstancePtr, DestinationCpu) ==
         XFSBL_SUCCESS) {
       /* Get the execution state */
-      ExecState = XFsbl_GetA53ExecState(PartitionHeader);
+      const u32 ExecState = XFsbl_GetA53ExecState(PartitionHeader);
+      const u32 CpuNo = FsblInstancePtr->HandoffCpuNo;
+
       FsblInstancePtr->HandoffValues[CpuNo].CpuSettings =
           DestinationCpu | ExecState;
       FsblInstancePtr->HandoffValues[CpuNo].HandoffAddress =
@@ -529,15 +515,17 @@ u32 XFsbl_PartitionCopy(XFsblPs* const FsblInstancePtr, u32 PartitionNum) {
   /**
    * Get the source(flash offset) address where it needs to copy
    */
-  SrcAddress = FsblInstancePtr->ImageOffsetAddress +
-               ((PartitionHeader->DataWordOffset) * XIH_PARTITION_WORD_LENGTH);
+  const u32 SrcAddress =
+      FsblInstancePtr->ImageOffsetAddress +
+      ((PartitionHeader->DataWordOffset) * XIH_PARTITION_WORD_LENGTH);
 
   /**
    * Length of the partition to be copied
    */
-  Length = (PartitionHeader->TotalDataWordLength) * XIH_PARTITION_WORD_LENGTH;
-  DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
-  LoadAddress = (PTRSIZE)PartitionHeader->DestinationLoadAddress;
+  const u32 Length =
+      (PartitionHeader->TotalDataWordLength) * XIH_PARTITION_WORD_LENGTH;
+  const u32 DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
+  PTRSIZE LoadAddress = (PTRSIZE)PartitionHeader->DestinationLoadAddress;
 
   /* Copy the PL to temporary DDR Address */
   if (DestinationDevice == XIH_PH_ATTRB_DEST_DEVICE_PL) {
@@ -810,93 +798,3 @@ static void XFsbl_CheckPmuFw(const XFsblPs* const FsblInstancePtr,
     } while (1);
   }
 }
-
-#ifdef XFSBL_BS
-/*****************************************************************************/
-/** Sets the library firmware state
- *
- * @param	State BS firmware state
- *
- * @return	None
- *****************************************************************************/
-static void XFsbl_SetBSSecureState(u32 State) {
-  u32 RegVal;
-
-  /* Set Firmware State in PMU GLOBAL GEN STORAGE Register */
-  RegVal = Xil_In32(PMU_GLOBAL_GLOB_GEN_STORAGE5);
-  RegVal &= ~XFSBL_STATE_MASK;
-  RegVal |= State << XFSBL_STATE_SHIFT;
-  Xil_Out32(PMU_GLOBAL_GLOB_GEN_STORAGE5, RegVal);
-}
-#endif
-
-#ifdef XFSBL_ENABLE_DDR_SR
-/*****************************************************************************/
-/**
- * This function waits for DDR out of self refresh.
- *
- * @param	None
- *
- * @return	None
- *
- *****************************************************************************/
-static void XFsbl_PollForDDRSrExit(void) {
-  u32 RegValue;
-  /* Timeout count for around 1 second */
-#  ifdef ARMR5
-  u32 TimeOut = XPAR_PSU_CORTEXR5_0_CPU_CLK_FREQ_HZ;
-#  else
-  u32 TimeOut = XPAR_PSU_CORTEXA53_0_CPU_CLK_FREQ_HZ;
-#  endif
-
-  /* Wait for DDR exit from self refresh mode within 1 second */
-  while (TimeOut > 0) {
-    RegValue = Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET);
-    if (!(RegValue & DDR_STATUS_FLAG_MASK)) {
-      break;
-    }
-    TimeOut--;
-  }
-}
-
-/*****************************************************************************/
-/**
- * This function removes reserved mark of DDR once it is out of self refresh.
- *
- * @param	None
- *
- * @return	None
- *
- *****************************************************************************/
-static void XFsbl_PollForDDRReady(void) {
-  volatile u32 RegValue;
-
-  RegValue = XFsbl_In32(PMU_GLOBAL_GLOBAL_CNTRL);
-  if ((RegValue & PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) ==
-      PMU_GLOBAL_GLOBAL_CNTRL_FW_IS_PRESENT_MASK) {
-    /*
-     * PMU firmware is ready. Set flag to indicate that DDR
-     * controller is ready, so that the PMU may bring the DDR out
-     * of self refresh if necessary.
-     */
-    RegValue = Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET);
-    Xil_Out32(XFSBL_DDR_STATUS_REGISTER_OFFSET, RegValue | DDRC_INIT_FLAG_MASK);
-
-    /*
-     * Read PMU register bit value that indicates DDR is in self
-     * refresh mode.
-     */
-    RegValue =
-        Xil_In32(XFSBL_DDR_STATUS_REGISTER_OFFSET) & DDR_STATUS_FLAG_MASK;
-    if (RegValue) {
-      /* Wait until DDR exits from self refresh */
-      XFsbl_PollForDDRSrExit();
-      /*
-       * Mark DDR region as "Memory" as DDR initialization is
-       * done
-       */
-      XFsbl_MarkDdrAsReserved(FALSE);
-    }
-  }
-}
-#endif

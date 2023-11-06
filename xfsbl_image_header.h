@@ -308,7 +308,7 @@ u32 XFsbl_ValidateChecksum(u32 Buffer[], u32 Length);
 u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
                           const XFsblPs_DeviceOps* DeviceOps,
                           u32 FlashImageOffsetAddress, u32 RunningCpu,
-                          u32 ImageHeaderAddress);
+                          u32 ImageHeaderTableAddressOffset);
 u32 XFsbl_ValidateImageHeader(const XFsblPs_ImageHeaderTable* ImageHeaderTable);
 u32 XFsbl_ValidatePartitionHeader(XFsblPs_PartitionHeader* PartitionHeader,
                                   u32 RunningCpu, u32 ResetType);

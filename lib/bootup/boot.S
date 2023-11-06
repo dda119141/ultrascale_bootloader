@@ -190,7 +190,7 @@ InitEL3:
 	 ldr x0,=FPUStatus
 	 str xzr, [x0]
 
-	/* Asynchronous exceptoin routing determines which exception level is used to
+	/* Asynchronous exception routing determines which exception level is used to
 	 * handle an exception.
 	 * To route an asynchronous exception to EL3, SCR_EL3 needs to be set
 	 */

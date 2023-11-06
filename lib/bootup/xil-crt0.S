@@ -45,7 +45,7 @@
 _startup:
 	mov	x0, #0
 
-// clear bss
+/*  clear bss */
     ldr     x5, =__bss_start__
 	mov     x9, #0
     ldr     x9, =__bss_end__

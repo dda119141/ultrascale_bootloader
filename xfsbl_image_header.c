@@ -137,7 +137,7 @@ extern u8* ImageHdr;
  *****************************************************************************/
 u32 XFsbl_ValidateChecksum(u32 Buffer[], u32 Length) {
   u32 Checksum = 0U;
-  u32 Count;
+  u32 Count = 0;
 
   /**
    * Length has to be at least equal to 2,
@@ -204,8 +204,6 @@ static void print_imageHeaderTable(
  *****************************************************************************/
 inline static u32 XFsbl_ValidateImageHeaderTable(
     XFsblPs_ImageHeaderTable* ImageHeaderTable) {
-  u32 PartitionPresentDevice;
-
   /**
    * Check the check sum of the image header table
    */
@@ -219,7 +217,7 @@ inline static u32 XFsbl_ValidateImageHeaderTable(
   /**
    * check for the partition present device
    */
-  PartitionPresentDevice = ImageHeaderTable->PartitionPresentDevice;
+  u32 PartitionPresentDevice = ImageHeaderTable->PartitionPresentDevice;
   if ((PartitionPresentDevice < XIH_IHT_PPD_SAME) ||
       (PartitionPresentDevice > XIH_IHT_PPD_SATA)) {
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PPD\n\r");
@@ -249,7 +247,7 @@ inline static u32 retrieve_handoff_atf_parameters(
   const XFsblPs_PartitionHeader* const CurrPartitionHdr =
       PartConfig->PartitionHeader;
   u32 GetDstnCpu = XFsbl_GetDestinationCpu(CurrPartitionHdr);
-  u32 DestnCPU;
+  u32 DestnCPU = 0;
 
   /* if destination cpu is not present, it means it is for same cpu */
   if (GetDstnCpu == XIH_PH_ATTRB_DEST_CPU_NONE) {
@@ -304,9 +302,6 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
                           u32 FlashImageOffsetAddress, u32 RunningCpu,
                           u32 ImageHeaderTableAddressOffset) {
   u32 Status = XFSBL_FAILURE;
-  u32 PartitionHeaderAddress;
-  u32 PartitionIndex;
-  u32 ATF_params_retrieval_count = 0;
 
   /**
    * Read the Image header table of 64 bytes
@@ -344,7 +339,7 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
   /**
    * Update the first partition address
    */
-  PartitionHeaderAddress =
+  u32 PartitionHeaderAddress =
       (ImageHeader->ImageHeaderTable.PartitionHeaderAddress) *
       XIH_PARTITION_WORD_LENGTH;
 
@@ -354,6 +349,7 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
    * Read the partitions based on the partition offset
    * and update the partition header structure
    */
+  u32 PartitionIndex = 0;
   for (PartitionIndex = 0U;
        PartitionIndex < ImageHeader->ImageHeaderTable.NoOfPartitions;
        PartitionIndex++) {
@@ -386,6 +382,8 @@ u32 XFsbl_ReadImageHeader(XFsblPs_ImageHeader* ImageHeader,
     PartConfig.PartitionHeader = &ImageHeader->PartitionHeader[PartitionIndex];
     PartConfig.RunningCpu = RunningCpu;
     PartConfig.PartitionIndex = PartitionIndex;
+
+    u32 ATF_params_retrieval_count = 0;
     const u32 Count = retrieve_handoff_atf_parameters(
         &PartConfig, ATF_params_retrieval_count);
     ATF_params_retrieval_count = Count;
@@ -494,15 +492,14 @@ static u32 XFsbl_CheckValidMemoryAddress(u64 Address, u32 CpuId, u32 DevId) {
 
 static u32 verify_encryption_values(
     const XFsblPs_PartitionHeader* const PartitionHeader) {
-  u32 IsEncrypted, IsAuthenticated;
-  u32 Status;
-
+  u32 IsEncrypted = FALSE;
   if (XFsbl_IsEncrypted(PartitionHeader) == XIH_PH_ATTRB_ENCRYPTION) {
     IsEncrypted = TRUE;
   } else {
     IsEncrypted = FALSE;
   }
 
+  u32 IsAuthenticated = FALSE;
   if (XFsbl_IsRsaSignaturePresent(PartitionHeader) ==
       XIH_PH_ATTRB_RSA_SIGNATURE) {
     IsAuthenticated = TRUE;
@@ -533,27 +530,24 @@ static u32 verify_encryption_values(
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength !=
          PartitionHeader->TotalDataWordLength)) {
-      Status = XFSBL_ERROR_PARTITION_LENGTH;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PARTITION_LENGTH\n\r");
-      return Status;
+      return XFSBL_ERROR_PARTITION_LENGTH;
     }
   } else if ((IsAuthenticated == TRUE) && (IsEncrypted == FALSE)) {
     if ((PartitionHeader->UnEncryptedDataWordLength !=
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength >=
          PartitionHeader->TotalDataWordLength)) {
-      Status = XFSBL_ERROR_PARTITION_LENGTH;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PARTITION_LENGTH\n\r");
-      return Status;
+      return XFSBL_ERROR_PARTITION_LENGTH;
     }
   } else if ((IsAuthenticated == FALSE) && (IsEncrypted == TRUE)) {
     if ((PartitionHeader->UnEncryptedDataWordLength >=
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength !=
          PartitionHeader->TotalDataWordLength)) {
-      Status = XFSBL_ERROR_PARTITION_LENGTH;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PARTITION_LENGTH\n\r");
-      return Status;
+      return XFSBL_ERROR_PARTITION_LENGTH;
     }
   } else /* Authenticated and Encrypted */
   {
@@ -561,9 +555,8 @@ static u32 verify_encryption_values(
          PartitionHeader->EncryptedDataWordLength) ||
         (PartitionHeader->EncryptedDataWordLength >=
          PartitionHeader->TotalDataWordLength)) {
-      Status = XFSBL_ERROR_PARTITION_LENGTH;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_PARTITION_LENGTH\n\r");
-      return Status;
+      return XFSBL_ERROR_PARTITION_LENGTH;
     }
   }
 
@@ -641,11 +634,7 @@ inline static u32 rCore_boot_check_dest_cpu(
  *****************************************************************************/
 u32 XFsbl_ValidatePartitionHeader(XFsblPs_PartitionHeader* PartitionHeader,
                                   u32 RunningCpu, u32 ResetType) {
-  u32 Status;
-  u32 DestinationCpu;
-  u32 DestinationDevice;
-
-  DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
+  u32 DestinationCpu = XFsbl_GetDestinationCpu(PartitionHeader);
   if (XFSBL_MASTER_ONLY_RESET == ResetType) {
     if (((XIH_PH_ATTRB_DEST_CPU_A53_0 == RunningCpu) &&
          (DestinationCpu <= XIH_PH_ATTRB_DEST_CPU_A53_3) &&
@@ -667,12 +656,12 @@ u32 XFsbl_ValidatePartitionHeader(XFsblPs_PartitionHeader* PartitionHeader,
     DestinationCpu = RunningCpu;
   }
 
-  Status = verify_encryption_values(PartitionHeader);
+  u32 Status = verify_encryption_values(PartitionHeader);
   if (Status != XFSBL_SUCCESS) {
     return Status;
   }
 
-  DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
+  u32 DestinationDevice = XFsbl_GetDestinationDevice(PartitionHeader);
   Status =
       XFsbl_CheckValidMemoryAddress(PartitionHeader->DestinationLoadAddress,
                                     DestinationCpu, DestinationDevice);

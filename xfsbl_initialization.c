@@ -116,7 +116,7 @@ extern u32 Iv[XIH_BH_IV_LENGTH / 4U];
 u32 SdCdnRegVal;
 
 static void XFsbl_PrintFsblBanner(void) {
-  s32 PlatInfo;
+  s32 PlatInfo = {0};
   /**
    * Print the FSBL Banner
    */
@@ -173,10 +173,9 @@ static void XFsbl_PrintFsblBanner(void) {
  *
  *****************************************************************************/
 static u32 XFsbl_GetResetReason(void) {
-  u32 Val;
-  u32 Ret;
+  u32 Ret = 0;
 
-  Val = XFsbl_In32(CRL_APB_RESET_REASON);
+  u32 Val = XFsbl_In32(CRL_APB_RESET_REASON);
 
   if ((Val & CRL_APB_RESET_REASON_PSONLY_RESET_REQ_MASK) != 0U) {
     /* Clear the PS Only reset bit as it is sticky */
@@ -204,7 +203,7 @@ static u32 XFsbl_GetResetReason(void) {
  *
  *****************************************************************************/
 u32 XFsbl_Initialize(XFsblPs* const FsblInstancePtr) {
-  u32 Status;
+  u32 Status = 0;
 
   /**
    * Place AES and SHA engines in reset
@@ -298,7 +297,7 @@ u32 XFsbl_Initialize(XFsblPs* const FsblInstancePtr) {
  * 			returns XFSBL_SUCCESS on success
  ******************************************************************************/
 u32 XFsbl_BootDeviceInit(XFsblPs* const FsblInstancePtr) {
-  u32 Status;
+  u32 Status = 0;
 
   /**
    * Configure the primary boot device
@@ -372,8 +371,7 @@ void XFsbl_EnableProgToPL(void) {
  *
  ******************************************************************************/
 static u32 XFsbl_ProcessorInit(XFsblPs* FsblInstancePtr) {
-  u32 Status;
-  PTRSIZE ClusterId;
+  PTRSIZE ClusterId = 0;
   u32 FsblProcType = 0;
   char DevName[PART_NAME_LEN_MAX];
 
@@ -398,9 +396,8 @@ static u32 XFsbl_ProcessorInit(XFsblPs* FsblInstancePtr) {
       ClusterId = 0xC0000100U;
     } else if (ClusterId == 0x80000005U) {
       /* this corresponds to R5-1 */
-      Status = XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID;
       XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID\n\r");
-      goto END;
+      return XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID;
     } else {
       /* For MISRA C compliance */
     }
@@ -416,9 +413,8 @@ static u32 XFsbl_ProcessorInit(XFsblPs* FsblInstancePtr) {
     XFsbl_Printf(DEBUG_GENERAL, "(64-bit) Processor");
     FsblInstancePtr->A53ExecState = XIH_PH_ATTRB_A53_EXEC_ST_AA64;
   } else {
-    Status = XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID;
     XFsbl_Printf(DEBUG_GENERAL, "XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID\n\r");
-    goto END;
+    return XFSBL_ERROR_UNSUPPORTED_CLUSTER_ID;
   }
 
   /*
@@ -441,9 +437,7 @@ static u32 XFsbl_ProcessorInit(XFsblPs* FsblInstancePtr) {
    */
   XFsbl_RegisterHandlers();
 
-  Status = XFSBL_SUCCESS;
-END:
-  return Status;
+  return XFSBL_SUCCESS;
 }
 
 /*****************************************************************************/

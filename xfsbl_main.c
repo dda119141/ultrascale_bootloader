@@ -191,10 +191,10 @@ int main(void) {
 
   while (FsblStagesVal.FsblStage <= XFSBL_STAGE_POST_HANDOFF) {
     switch (FsblStagesVal.FsblStage) {
-    case SYSTEM_INIT: {
+    case SYSTEM_INIT:
       print_stage_status(&FsblStagesVal);
-      FsblStagesVal.FsblStageStatus = XFsbl_Initialize(&FsblInstance);
 
+      FsblStagesVal.FsblStageStatus = XFsbl_Initialize(&FsblInstance);
       if (XFSBL_SUCCESS != FsblStagesVal.FsblStageStatus) {
         FsblStagesVal.FsblStageStatus += XFSBL_ERROR_STAGE_1_INIT_FAILED;
         FsblStagesVal.FsblStage = XFSBL_STAGE_ERR;
@@ -202,37 +202,40 @@ int main(void) {
       } else {
         FsblStagesVal.FsblStage = SYSTEM_PRIMARY_BOOT_DEVICE_INIT;
       }
-    } break;
+      break;
 
     case SYSTEM_PRIMARY_BOOT_DEVICE_INIT:
+
       print_stage_status(&FsblStagesVal);
       initialize_primary_bootdevice(&FsblInstance, &FsblStagesVal);
       break;
+
     case XFSBL_PARTITION_LOAD:
+
       print_stage_status(&FsblStagesVal);
       load_artifacts(&FsblInstance, &FsblStagesVal);
       break;
-    case XFSBL_HANDOFF: {
+
+    case XFSBL_HANDOFF:
+
       print_stage_status(&FsblStagesVal);
       perform_handoff(&FsblInstance, &FsblStagesVal);
-    } break;
+      break;
 
-    case XFSBL_STAGE_ERR: {
+    case XFSBL_STAGE_ERR:
       XFsbl_ErrorLockDown(FsblStagesVal.FsblStageStatus);
-    } break;
+      break;
 
     case XFSBL_STAGE_POST_HANDOFF:
-    default: {
+    default:
       XFsbl_Printf(DEBUG_GENERAL,
                    "In post handoff stage: "
                    "handoffs completed \n\r");
 
-      /**
-       * Exit FSBL
-       */
+      /*** Exit FSBL */
       XFsbl_HandoffExit(0U, XFSBL_NO_HANDOFFEXIT);
 
-    } break;
+      break;
 
     } /* End of switch(FsblStage) */
 
@@ -314,13 +317,11 @@ void XFsbl_ErrorLockDown(u32 ErrorStatus) {
  * @note We will not return from this function as it does soft reset
  *****************************************************************************/
 static void XFsbl_FallBack(void) {
-  u32 RegValue;
-
   /* Hook before FSBL Fallback */
   (void)XFsbl_HookBeforeFallback();
 
   /* Read the Multiboot register */
-  RegValue = XFsbl_In32(CSU_CSU_MULTI_BOOT);
+  u32 RegValue = XFsbl_In32(CSU_CSU_MULTI_BOOT);
 
   XFsbl_Printf(DEBUG_GENERAL, "Performing FSBL FallBack\n\r");
 
@@ -345,8 +346,6 @@ static void XFsbl_FallBack(void) {
  *****************************************************************************/
 
 static void XFsbl_UpdateMultiBoot(u32 MultiBootValue) {
-  u32 RegValue;
-
   XFsbl_Out32(CSU_CSU_MULTI_BOOT, MultiBootValue);
 
   /**
@@ -354,6 +353,7 @@ static void XFsbl_UpdateMultiBoot(u32 MultiBootValue) {
    * used. Hence, just for 1.0 Silicon, bypass the RPLL clock before
    * giving System Reset.
    */
+  u32 RegValue = 0;
   if (XGetPSVersion_Info() == (u32)XPS_VERSION_1) {
     RegValue = XFsbl_In32(CRL_APB_RPLL_CTRL) | CRL_APB_RPLL_CTRL_BYPASS_MASK;
     XFsbl_Out32(CRL_APB_RPLL_CTRL, RegValue);
