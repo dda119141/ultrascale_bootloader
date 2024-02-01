@@ -1,5 +1,3 @@
-set (CROSS_COMPILE "${CMAKE_SOURCE_DIR}/../../toolchain/arm-gnu-toolchain-12.2.rel1-x86_64-aarch64-none-elf/bin/aarch64-none-elf-")
-
 set(CMAKE_SYSTEM_NAME Linux)
 set(CMAKE_SYSTEM_PROCESSOR arm)
 
