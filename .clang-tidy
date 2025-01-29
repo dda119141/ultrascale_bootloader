@@ -1,0 +1,6 @@
+---
+Checks:          '-*,modernize-*,-bugprone-sizeof-expression'
+#WarningsAsErrors: '*'
+#Checks:          '-*,clang-diagnostic-*,clang-analyzer-*,modernize-*,-bugprone-sizeof-expression'
+HeaderFilterRegex: '.*\.[h|inl]$'
+FormatStyle: 'file'
