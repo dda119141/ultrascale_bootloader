@@ -19,3 +19,264 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (c) 2018 - 2020 Xilinx, Inc. All rights reserved.
+SPDX-License-Identifier: MIT
+
+./generated/psu_init.c
+./generated/psu_init.h
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (c) 2015 - 2021 Xilinx, Inc. All rights reserved.
+SPDX-License-Identifier: MIT
+
+./main
+./main/xfsbl_qspi.h
+./main/xfsbl_hooks.c
+./main/xfsbl_exit.S
+./main/xfsbl_image_header.c
+./main/xfsbl_qspi.c
+./main/xfsbl_error.h
+./main/xfsbl_image_header.h
+./main/xfsbl_ddr_init.h
+./main/xfsbl_main.c
+./main/xfsbl_handoff.c
+./main/xfsbl_misc.h
+./main/xfsbl_main.h
+./main/xfsbl_board.c
+./main/xfsbl_misc.c
+./main/xfsbl_hooks.h
+./main/xfsbl_partition_load.c
+./main/xfsbl_debug.h
+./main/xfsbl_ddr_init.c
+./main/xfsbl_board.h
+./main/xfsbl_hw.h
+./main/xfsbl_initialization.c
+./main/xfsbl_config.h
+./lib/ipipsu/xipipsu_g.c
+./lib/ipipsu/xipipsu_buf.c
+./lib/ipipsu/Makefile
+./lib/ipipsu/xipipsu_buf.h
+./lib/ipipsu/xipipsu_hw.h
+./lib/ipipsu/xipipsu.c
+./lib/ipipsu/xipipsu_sinit.c
+./lib/ipipsu/examples/xipipsu_self_test_example.c
+./lib/ipipsu/examples/index.html
+./lib/ipipsu/examples/readme.txt
+./lib/ipipsu/xipipsu.h
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (c) 2015 - 2020 Xilinx, Inc. All rights reserved.
+SPDX-License-Identifier: MIT
+
+./pm/pm_client.h
+./pm/pm_api_sys.h
+./pm/pm_cfg_obj.c
+./pm/pm_apu.h
+./pm/pm_callbacks.h
+./pm/pm_clock.h
+./pm/pm_defs.h
+./pm/pm_clock.c
+./pm/pm_api_sys.c
+./pm/pm_client.c
+./pm/pm_callbacks.c
+./pm/pm_common.h
+./pm/pm_cfg_obj.h
+./lib/common.mk
+./lib/common/xil_util.h
+./lib/common/xparameters.h
+./lib/common/xpseudo_asm.h
+./lib/common/xtime_l.h
+./lib/common/xdebug.h
+./lib/common/xplatform_info.h
+./lib/common/xil_exception.h
+./lib/common/Makefile
+./lib/common/xil_macroback.h
+./lib/common/bspconfig.h
+./lib/common/xil_assert.h
+./lib/common/xil_testcache.h
+./lib/common/xil_spinlock.h
+./lib/common/xparameters_ps.h
+./lib/common/xil_testio.h
+./lib/common/xenv.h
+./lib/common/xil_types.h
+./lib/common/xil_cache.h
+./lib/common/xreg_cortexa53.h
+./lib/common/xil_hal.h
+./lib/common/xpm_counter.h
+./lib/common/xil_sleeptimer.h
+./lib/common/vectors.h
+./lib/common/xil_printf.h
+./lib/common/xil_testmem.h
+./lib/common/xil_errata.h
+./lib/common/xil_mmu.h
+./lib/common/xstatus.h
+./lib/common/xil_io.h
+./lib/common/xenv_standalone.h
+./lib/common/xbasic_types.h
+./lib/common/xpseudo_asm_gcc.h
+./lib/common/xil_cache_vxworks.h
+./lib/common/sleep.h
+./lib/common/xil_smc.h
+./lib/common/xil_mem.h
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (c) 2015 - 2020 Xilinx, Inc. All rights reserved. Copyright (c) 2022 -
+2023, Advanced Micro Devices, Inc. All Rights Reserved.
+SPDX-License-Identifier: MIT
+
+./lib/bootup/xfsbl_translation_table_a53_64.S
+./main/xfsbl_misc_drivers.h
+./main/xfsbl_misc_drivers.c
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (C) 2013 - 2022 Xilinx, Inc. All rights reserved. Copyright (c) 2022 -
+2024 Advanced Micro Devices, Inc. All Rights Reserved.
+SPDX-License-Identifier: MIT
+
+./lib/sdps/xsdps.h
+./lib/sdps/Makefile
+./lib/sdps/xsdps_core.h
+./lib/sdps/xsdps.c
+./lib/sdps/xsdps_host.c
+./lib/sdps/xsdps_options.c
+./lib/sdps/xsdps_card.c
+./lib/sdps/xsdps_g.c
+./lib/sdps/xsdps_hw.h
+./lib/sdps/xsdps_sinit.c
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (C) 2010 - 2021 Xilinx, Inc. All rights reserved. Copyright (c) 2022 -
+2024 Advanced Micro Devices, Inc. All Rights Reserved.
+SPDX-License-Identifier: MIT
+
+./lib/uartps/xuartps_g.c
+./lib/uartps/xuartps.c
+./lib/uartps/xuartps.h
+./lib/uartps/Makefile
+./lib/uartps/xuartps_hw.h
+./lib/uartps/xuartps_sinit.c
+./lib/uartps/xuartps_intr.c
+./lib/uartps/xuartps_hw.c
+./lib/uartps/xuartps_options.c
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (C) 2014 - 2022 Xilinx, Inc. All rights reserved. Copyright (c) 2022 -
+2023 Advanced Micro Devices, Inc. All Rights Reserved.
+SPDX-License-Identifier: MIT
+
+./lib/qspipsu/xqspipsu.c
+./lib/qspipsu/xqspipsu_options.c
+./lib/qspipsu/libqspipsu
+./lib/qspipsu/xqspipsu_control.c
+./lib/qspipsu/xqspipsu.h
+./lib/qspipsu/Makefile
+./lib/qspipsu/xqspipsu_control.h
+./lib/qspipsu/xqspipsu_hw.c
+./lib/qspipsu/xqspipsu_sinit.c
+./lib/qspipsu/xqspipsu_g.c
+./lib/qspipsu/xqspipsu_hw.h
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (c) 2009 - 2022 Xilinx, Inc. All rights reserved.
+SPDX-License-Identifier: MIT
+
+./lib/bootup/_open.c
+./lib/bootup/xil_cache.c
+./lib/bootup/xil_sleeptimer.c
+./lib/bootup/asm_vectors.S
+./lib/bootup/xil_exception.c
+./lib/bootup/_sbrk.c
+./lib/bootup/fstat.c
+./lib/bootup/kill.c
+./lib/bootup/invalidate_caches.S
+./lib/bootup/xil-crt0.S
+./lib/bootup/print.c
+./lib/bootup/xil_util.c
+./lib/bootup/_exit.c
+./lib/bootup/xtime_l.c
+./lib/bootup/xil_printf.c
+./lib/bootup/putnum.c
+./lib/bootup/inbyte.c
+./lib/bootup/Makefile
+./lib/bootup/xil_assert.c
+./lib/bootup/xil_sleepcommon.c
+./lib/bootup/fcntl.c
+./lib/bootup/sbrk.c
+./lib/bootup/time.c
+./lib/bootup/isatty.c
+./lib/bootup/xil_mem.c
+./lib/bootup/close.c
+./lib/bootup/xil_smc.c
+./lib/bootup/errno.c
+./lib/bootup/write.c
+./lib/bootup/getpid.c
+./lib/bootup/open.c
+./lib/bootup/lseek.c
+./lib/bootup/xil_mmu.c
+./lib/bootup/xplatform_info.c
+./lib/bootup/vectors.c
+./lib/bootup/initialise_monitor_handles.c
+./lib/bootup/read.c
+./lib/bootup/outbyte.c
+./lib/bootup/cpputest_time.c
+./lib/bootup/abort.c
+./lib/bootup/sleep.c
+./lib/bootup/boot.S
+./lib/bootup/unlink.c
+
+
+
+COPYRIGHT TEXT:
+---------------
+
+Copyright (C) 2010 - 2021 Xilinx, Inc. All rights reserved. Copyright (C) 2022 -
+2024 Advanced Micro Devices, Inc. All Rights Reserved.
+SPDX-License-Identifier: MIT
+
+./lib/xiicps/xiicps_hw.h
+./lib/xiicps/xiicps_intr.c
+./lib/xiicps/xiicps.c
+./lib/xiicps/xiicps_sinit.c
+./lib/xiicps/xiicps_slave.c
+./lib/xiicps/xiicps_hw.c
+./lib/xiicps/Makefile
+./lib/xiicps/xiicps_master.c
+./lib/xiicps/xiicps_g.c
+./lib/xiicps/xiicps_xfer.c
+./lib/xiicps/xiicps_options.c
+./lib/xiicps/xiicps_selftest.c
+./lib/xiicps/xiicps.h
+./lib/xiicps/xiicps_xfer.h
